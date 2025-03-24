@@ -4,13 +4,13 @@ import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import LoginForm from '@/components/auth/login-form'
 import SignupForm from '@/components/auth/signup-form'
-import { useAuth } from '@/components/auth/auth-provider'
+import { useMockAuth } from '@/components/auth/mock-auth-provider'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState("login")
-  const { user, isLoading } = useAuth()
+  const { user, isLoading } = useMockAuth()
   const router = useRouter()
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function AuthPage() {
   return (
     <div className="container max-w-md py-12">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-[#004977] mb-2">Welcome to PodWave</h1>
+        <h1 className="text-3xl font-bold text-[#004977] mb-2">Welcome to A-OK Player</h1>
         <p className="text-muted-foreground">Your personal podcast companion</p>
       </div>
 
@@ -62,7 +62,7 @@ export default function AuthPage() {
                 onClick={() => setActiveTab("login")}
                 className="text-[#009BA4] hover:underline"
               >
-                Login
+                Log in
               </button>
             </p>
           </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { useAuth } from './auth-provider'
+import { useMockAuth } from './mock-auth-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,7 +11,7 @@ export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn } = useMockAuth()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -54,35 +54,35 @@ export default function LoginForm() {
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <label htmlFor="email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Email
+            </label>
             <Input
               id="email"
               type="email"
-              placeholder="your@email.com"
+              placeholder="m@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full"
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">Password</label>
+            <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Password
+            </label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full"
+              disabled={isLoading}
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <Button 
-            type="submit"
-            className="w-full bg-[#009BA4] hover:bg-[#007187]" 
-            disabled={isLoading}
-          >
+        <CardFooter>
+          <Button type="submit" className="w-full bg-[#009BA4] hover:bg-[#007A82]" disabled={isLoading}>
             {isLoading ? "Logging in..." : "Login"}
           </Button>
         </CardFooter>

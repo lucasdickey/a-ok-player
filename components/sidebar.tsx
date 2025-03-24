@@ -4,7 +4,7 @@ import type React from "react"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, Library, ListMusic } from "lucide-react"
+import { Home, Search, Library, ListMusic, Rss } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useMobile } from "@/hooks/use-mobile"
@@ -23,7 +23,7 @@ export default function Sidebar() {
       <div className="p-4">
         <Link href="/" className="flex items-center gap-2 font-bold text-xl text-[#004977]">
           <div className="w-8 h-8 rounded-full bg-[#00CCCC] flex items-center justify-center text-white">P</div>
-          PodWave
+          A-OK Player
         </Link>
       </div>
 
@@ -32,8 +32,8 @@ export default function Sidebar() {
           <NavItem href="/" icon={<Home className="h-4 w-4 mr-3" />} label="Discover" active={pathname === "/"} />
           <NavItem
             href="/search"
-            icon={<Search className="h-4 w-4 mr-3" />}
-            label="Search"
+            icon={<Rss className="h-4 w-4 mr-3" />}
+            label="Add RSS Feed"
             active={pathname === "/search"}
           />
           <NavItem
@@ -86,4 +86,3 @@ function NavItem({ href, icon, label, active }: NavItemProps) {
     </Link>
   )
 }
-
