@@ -1,0 +1,150 @@
+# A-OK Player Development Prompts
+
+This document contains the sequence of prompts used to build the A-OK Player podcast application, allowing anyone to recreate the development process step by step.
+
+## 1. Initial Application Design
+
+```
+Design a podcast web app that has all the standard features:
+
+Discovery via browse mode of catalog (stub this out, I'll have APIs later)
+Discovery via search mode (stub this out, I'll have APIs here later, too) 2.a Search should account for keyword search across podcast name and episode name, as well as transcript search.
+A library of podcast subscriptions.
+A library of saved episodes.
+A episode playback queue
+A player that has the following functionality: 6.a Playback 6.b Pause 6.c Seek ahead 30 seconds 6.d Seek back 30 seconds 6.e Jump to next episode in queue 6.f Control playback speed
+The player tray should display the podcast title and episode title.
+On desktop, the player tray will show artwork on hover.
+On mobile, the artwork will always be displayed.
+Use common front-end component libraries (Shadcn) and design frameworks (TailWind) plus NextJS on the front end.
+Pull from the color list below for primary actions, secondary actions, text, titles, hover states, and the like.
+The player tray should be expandable to show the entire playback queue.
+The queue:
+
+The user should be able to add episodes from a podcast page to a playback queue, either next in the queue or at the of the queue.
+The user should be able to remove tracks from the queue as well as rearrange tracks in the queue.
+The user should be able to add bookmarked episodes back to their queue.
+State:
+
+The player should remember the last point the user was at when the paused or cease playback, either by hitting the pause button or skipping to another episode.
+The user's queue, bookmarks, and subscribed podcasts should be accessible as they move from browser instance to browser instance, meaning they need an account.
+Color list: 
+#004977 
+#007187 
+#009BA4 
+#00CCCC 
+#9EDEDA 
+#D8EFE9 
+#FAE67E 
+#FCEFB9 
+#FEF6DC 
+#CE2090 
+#ED9FBA 
+#FFFCF6 
+#091017 
+#46494D 
+#F2F2F3 
+#FFFFFF
+```
+
+## 2. Backend Requirements Revision
+
+```
+I'd like to review with you the initial requirements that I gave to v0.dev and see if you come to any alternative implementations. After that, I'd like you to proceed with back-end. I'd like to deploy this app with Vercel. I'd like the database in somwewhere SaaS based (Supabase or Neon).
+```
+
+## 3. Backend Implementation Scope Definition
+
+```
+I'd like for all of that. But with a few exceptions. For this initial proof of concept, I want the index input via a simple interface by the user -- i.e. they'll put in the RSS feeds they're interested in and we'll add it to the database for them specific to their account. On each time they load the player, you will scan all the RSS feeds they're subscribed to and fetch in the latest information. There is no need to recall historical states of RSS feed XMLs. Also, let's not do transcript search initially. Let's come back to that. So search to start will be just keyword search on podcast title and episode title and episode description based on the catalog the user creates with manuall RSS feed addition.
+```
+
+## 4. Supabase Database Schema and API Implementation
+
+This step involved creating:
+
+1. Supabase database schema for:
+   - Podcast subscriptions
+   - Queue items
+   - Saved episodes
+   - Playback states
+
+2. Backend API routes for:
+   - Authentication
+   - RSS feed parsing and management
+   - Podcast and episode data retrieval
+   - Queue management
+   - Playback state persistence
+   - Basic search functionality
+
+3. Authentication components:
+   - Auth provider context
+   - Login form
+   - Signup form
+
+4. RSS feed addition interface
+
+Implementation steps:
+1. Set up Supabase client and type definitions
+2. Create authentication provider and components
+3. Implement RSS feed parser utility
+4. Develop API routes for all core functionality
+5. Update application layout to include authentication
+
+```
+Implement Supabase database schema, API routes, and authentication for a podcast app that:
+1. Allows users to add RSS feeds manually
+2. Parses and stores podcast data from those feeds
+3. Manages user subscriptions, queue, saved episodes and playback state
+4. Provides search across podcast title, episode title and description
+5. Prepares for Vercel deployment
+```
+
+## 5. Github Repository Setup
+
+```
+Create a Git repository for the project and push all changes
+```
+
+## 6. Supabase Project Setup
+
+```
+Guide me through setting up a Supabase project for this application, including:
+1. Creating a new project
+2. Setting up the database schema
+3. Configuring authentication
+4. Connecting it to the application
+```
+
+## 7. Frontend Integration with Backend
+
+```
+Integrate the backend API with the frontend components:
+1. Connect authentication to the UI
+2. Update podcast discovery to use real subscriptions
+3. Connect player and queue to use persistent state
+4. Implement the search functionality
+```
+
+## 8. Deployment to Vercel
+
+```
+Guide me through deploying the application to Vercel:
+1. Setting up a Vercel project
+2. Configuring environment variables
+3. Connecting to the Supabase backend
+4. Deploying the application
+```
+
+## 9. Testing and Refinement
+
+```
+Help me test and refine the application:
+1. Create test user accounts
+2. Add sample RSS feeds
+3. Test playback and queue functionality
+4. Verify persistence across sessions
+5. Identify and fix any issues
+```
+
+*Note: This document will be updated throughout the development process to include all prompts used in creating the A-OK Player application.*
