@@ -19,6 +19,21 @@ A podcast web app that allows users to add and manage RSS feeds, play episodes, 
 - **Authentication**: Supabase Auth
 - **Deployment**: Vercel
 
+## Development Process Documentation
+
+This project includes a `PROMPTS.md` file that documents the step-by-step development process used to build the A-OK Player application. The file contains:
+
+- All prompts used to guide the development
+- Implementation decisions and architectural choices
+- Feature development sequence
+- Deployment steps and configuration
+
+Reviewing `PROMPTS.md` is helpful for:
+- Understanding how the application was constructed
+- Learning about the development workflow
+- Getting context on design decisions
+- Following the same process to build similar applications
+
 ## Getting Started
 
 ### Prerequisites
@@ -65,67 +80,21 @@ pnpm dev
 
 ## Database Schema
 
-Create the following tables in your Supabase database:
+You can create the necessary tables in your Supabase database by running the SQL script located in `supabase/schema.sql`. Follow these steps:
 
-### podcast_subscriptions
+1. Go to your Supabase project dashboard
+2. Navigate to the "SQL Editor" in the left sidebar
+3. Create a new query
+4. Copy and paste the contents of `supabase/schema.sql` into the editor
+5. Run the query to create all tables and set up Row Level Security (RLS) policies
 
-```sql
-create table
-  public.podcast_subscriptions (
-    id uuid not null default uuid_generate_v4(),
-    created_at timestamp with time zone not null default now(),
-    user_id uuid not null,
-    feed_url text not null,
-    title text null,
-    constraint podcast_subscriptions_pkey primary key (id),
-    constraint podcast_subscriptions_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade
-  ) tablespace pg_default;
-```
+This script will create the following tables:
+- `podcast_subscriptions` - Stores user podcast subscriptions (RSS feeds)
+- `queue_items` - Manages the playback queue
+- `saved_episodes` - Tracks bookmarked/saved episodes
+- `playback_states` - Stores playback position and rate for episodes
 
-### queue_items
-
-```sql
-create table
-  public.queue_items (
-    id uuid not null default uuid_generate_v4(),
-    user_id uuid not null,
-    episode_id text not null,
-    position integer not null,
-    added_at timestamp with time zone not null default now(),
-    constraint queue_items_pkey primary key (id),
-    constraint queue_items_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade
-  ) tablespace pg_default;
-```
-
-### saved_episodes
-
-```sql
-create table
-  public.saved_episodes (
-    id uuid not null default uuid_generate_v4(),
-    user_id uuid not null,
-    episode_id text not null,
-    created_at timestamp with time zone not null default now(),
-    constraint saved_episodes_pkey primary key (id),
-    constraint saved_episodes_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade
-  ) tablespace pg_default;
-```
-
-### playback_states
-
-```sql
-create table
-  public.playback_states (
-    id uuid not null default uuid_generate_v4(),
-    user_id uuid not null,
-    episode_id text not null,
-    last_position numeric not null default 0,
-    playback_rate numeric not null default 1,
-    updated_at timestamp with time zone not null default now(),
-    constraint playback_states_pkey primary key (id),
-    constraint playback_states_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade
-  ) tablespace pg_default;
-```
+Each table includes Row Level Security policies to ensure users can only access their own data.
 
 ## Deployment to Vercel
 
