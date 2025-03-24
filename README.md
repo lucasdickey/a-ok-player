@@ -4,19 +4,20 @@ A podcast web app that allows users to add and manage RSS feeds, play episodes, 
 
 ## Features
 
-- User authentication with Supabase
+- User authentication with Supabase (with mock authentication option for testing)
 - RSS feed input and management
 - Podcast playback with queue management
 - Bookmarking and saving episodes
 - Playback state persistence across devices
-- Search functionality across podcast titles, episode titles, and descriptions
+- Library management for subscribed podcasts
 
 ## Tech Stack
 
 - **Frontend**: Next.js, React, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API Routes
 - **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
+- **Authentication**: Supabase Auth with mock option for local development
+- **State Management**: Local Storage (for development) and Supabase (for production)
 - **Deployment**: Vercel
 
 ## Development Process Documentation
@@ -39,8 +40,8 @@ Reviewing `PROMPTS.md` is helpful for:
 ### Prerequisites
 
 - Node.js (v18 or higher)
-- pnpm
-- Supabase account
+- npm or pnpm
+- Supabase account (optional for local development)
 
 ### Setup
 
@@ -52,31 +53,65 @@ cd a-ok-player
 
 2. Install dependencies
 ```bash
+npm install
+# or
 pnpm install
 ```
 
-3. Create a Supabase project
-   - Go to [Supabase](https://supabase.com/) and create a new project
-   - Set up the database schema (instructions below)
-   - Copy your project URL and anon key
+3. Set up environment variables
+   - For local development without Supabase, you can use the mock authentication:
+     ```bash
+     cp .env.local.example .env.local
+     ```
+   - For Supabase integration:
+     - Create a Supabase project
+     - Set up the database schema (instructions below)
+     - Copy your project URL and anon key to `.env.local`
 
-4. Create a `.env.local` file
+4. Run the development server
 ```bash
-cp .env.example .env.local
-```
-
-5. Update the `.env.local` file with your Supabase credentials
-```
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
-
-6. Run the development server
-```bash
+npm run dev
+# or
 pnpm dev
 ```
 
-7. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Application Architecture
+
+### Authentication
+
+The application supports two authentication modes:
+
+1. **Supabase Authentication (Production)**
+   - Uses Supabase Auth for user management
+   - Requires valid Supabase credentials in `.env.local`
+   - Provides secure, persistent authentication across sessions
+
+2. **Mock Authentication (Development)**
+   - Simulates authentication flow without requiring Supabase
+   - Uses localStorage to persist authentication state
+   - Ideal for local development and testing
+   - Enabled by default in the application
+
+To switch between authentication modes, modify the `_app.tsx` file to use either the `AuthProvider` (Supabase) or `MockAuthProvider` (local development).
+
+### RSS Feed Management
+
+The application now uses an RSS feed-based approach instead of a search-based podcast discovery:
+
+1. **Adding RSS Feeds**
+   - Users can input podcast RSS feed URLs directly
+   - The application fetches and parses the feed metadata
+   - Feeds are saved to the user's library
+
+2. **Storage Options**
+   - **Development**: RSS feeds are stored in localStorage
+   - **Production**: RSS feeds are stored in Supabase database
+
+3. **Library Management**
+   - The library page displays all subscribed RSS feeds
+   - Users can view and manage their subscriptions
 
 ## Database Schema
 
@@ -104,6 +139,27 @@ Each table includes Row Level Security policies to ensure users can only access 
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. Deploy your project
+
+The application is currently deployed at: https://a-ok-player-krwpvvb3l-lucasdickeys-projects.vercel.app
+
+## Testing
+
+### Mock Authentication
+
+For testing the application without Supabase:
+1. Use the mock authentication system
+2. Default test credentials:
+   - Email: `testuser@aokplayer.com`
+   - Password: `TestPassword123!`
+
+### RSS Feed Testing
+
+To test the RSS feed functionality:
+1. Navigate to the "Add RSS Feed" page
+2. Enter a valid podcast RSS feed URL (e.g., https://feeds.simplecast.com/54nAGcIl)
+3. Preview the feed metadata
+4. Add the feed to your library
+5. View your subscribed feeds in the Library page
 
 ## License
 
