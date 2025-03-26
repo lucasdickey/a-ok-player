@@ -55,19 +55,33 @@ export function MockAuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check for saved auth in localStorage on mount
   useEffect(() => {
-    const savedAuth = localStorage.getItem('mock_auth')
-    if (savedAuth) {
-      setUser(mockUser)
-      setSession(mockSession)
+    try {
+      console.log('Checking for saved auth in localStorage');
+      const savedAuth = localStorage.getItem('mock_auth');
+      console.log('Saved auth:', savedAuth);
+      if (savedAuth) {
+        console.log('Setting user from saved auth');
+        setUser(mockUser);
+        setSession(mockSession);
+      }
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error loading auth from localStorage:', error);
+      setIsLoading(false);
     }
-    setIsLoading(false)
-  }, [])
+  }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('Mock sign in with:', email);
     // Simple mock authentication - accept any credentials
-    setUser(mockUser)
-    setSession(mockSession)
-    localStorage.setItem('mock_auth', 'true')
+    setUser(mockUser);
+    setSession(mockSession);
+    try {
+      localStorage.setItem('mock_auth', 'true');
+      console.log('Saved auth to localStorage');
+    } catch (error) {
+      console.error('Error saving auth to localStorage:', error);
+    }
     
     return {
       error: null,
@@ -75,13 +89,13 @@ export function MockAuthProvider({ children }: { children: React.ReactNode }) {
         user: mockUser,
         session: mockSession
       }
-    }
+    };
   }
 
   const signUp = async (email: string, password: string) => {
     // Simple mock signup - automatically succeeds
-    setUser(mockUser)
-    setSession(mockSession)
+    setUser(mockUser);
+    setSession(mockSession);
     localStorage.setItem('mock_auth', 'true')
     
     return {

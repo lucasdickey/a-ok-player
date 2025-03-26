@@ -9,6 +9,7 @@ import { useMockAuth } from "@/components/auth/mock-auth-provider"
 import { fetchRSSFeed, saveRSSFeed, RSSFeedMetadata } from "@/lib/rss-service"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { useRouter } from "next/navigation"
 
 export default function AddRSSFeedPage() {
   const [feedUrl, setFeedUrl] = useState("")
@@ -18,6 +19,7 @@ export default function AddRSSFeedPage() {
   const [success, setSuccess] = useState(false)
   const { toast } = useToast()
   const { user } = useMockAuth()
+  const router = useRouter()
 
   const handleFetchFeed = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,35 +54,46 @@ export default function AddRSSFeedPage() {
   }
 
   const handleAddToLibrary = async () => {
-    if (!user || !feedPreview) return
+    if (!user || !feedPreview) {
+      console.error('Cannot add to library: user or feedPreview is null', { user, feedPreview });
+      return;
+    }
     
-    setIsLoading(true)
+    console.log('Adding feed to library for user:', user.id);
+    setIsLoading(true);
     
     try {
-      const { error } = await saveRSSFeed(user.id, feedUrl, feedPreview)
+      const result = await saveRSSFeed(user.id, feedUrl, feedPreview);
+      console.log('Save result:', result);
       
-      if (error) {
+      if (result.error) {
         toast({
           title: "Error",
-          description: error.message,
+          description: result.error.message,
           variant: "destructive"
-        })
-        return
+        });
+        return;
       }
       
-      setSuccess(true)
+      setSuccess(true);
       toast({
         title: "Success!",
         description: `"${feedPreview.title}" has been added to your library.`,
-      })
+      });
+      
+      // Navigate to library after a short delay
+      setTimeout(() => {
+        router.push('/library');
+      }, 1500);
     } catch (err) {
+      console.error('Error saving feed:', err);
       toast({
         title: "An error occurred",
         description: "Unable to add podcast to your library. Please try again.",
         variant: "destructive"
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -102,7 +115,7 @@ export default function AddRSSFeedPage() {
         />
         <Button 
           type="submit" 
-          className="bg-[#004977] hover:bg-[#007187]"
+          className="bg-[#c32b1a] hover:bg-[#a82315]"
           disabled={isLoading}
         >
           {isLoading ? (
@@ -152,7 +165,7 @@ export default function AddRSSFeedPage() {
           <CardFooter>
             <Button 
               onClick={handleAddToLibrary} 
-              className="bg-[#009BA4] hover:bg-[#007A82] w-full"
+              className="bg-[#c32b1a] hover:bg-[#a82315] w-full"
               disabled={isLoading || success}
             >
               {isLoading ? (
@@ -193,7 +206,12 @@ export default function AddRSSFeedPage() {
           />
           <FeedSuggestion 
             title="TED Talks Daily" 
-            url="https://feeds.megaphone.fm/HSW7591467563" 
+            url="https://feeds.megaphone.fm/TPG6175046888" 
+            onSelect={(url) => setFeedUrl(url)}
+          />
+          <FeedSuggestion 
+            title="Radiolab" 
+            url="https://feeds.simplecast.com/DGRPxE8O" 
             onSelect={(url) => setFeedUrl(url)}
           />
         </div>
@@ -203,21 +221,22 @@ export default function AddRSSFeedPage() {
 }
 
 interface FeedSuggestionProps {
-  title: string
-  url: string
-  onSelect: (url: string) => void
+  title: string;
+  url: string;
+  onSelect: (url: string) => void;
 }
 
 function FeedSuggestion({ title, url, onSelect }: FeedSuggestionProps) {
   return (
-    <div className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50">
+    <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/5 transition-colors">
       <div>
         <h3 className="font-medium">{title}</h3>
-        <p className="text-sm text-muted-foreground truncate max-w-md">{url}</p>
+        <p className="text-xs text-muted-foreground truncate max-w-md">{url}</p>
       </div>
       <Button 
         variant="outline" 
-        size="sm" 
+        size="sm"
+        className="bg-[#c32b1a] hover:bg-[#a82315]"
         onClick={() => onSelect(url)}
       >
         Use

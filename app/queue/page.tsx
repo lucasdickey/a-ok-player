@@ -23,10 +23,10 @@ export default function QueuePage() {
 
       {queue.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-          <Clock className="h-12 w-12 mb-4 text-[#009BA4]" />
+          <Clock className="h-12 w-12 mb-4 text-primary" />
           <h2 className="text-xl font-medium mb-2">Your queue is empty</h2>
           <p className="mb-4">Add episodes from podcasts to start building your queue</p>
-          <Button className="bg-[#004977] hover:bg-[#007187]">Discover Podcasts</Button>
+          <Button>Discover Podcasts</Button>
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
@@ -40,13 +40,13 @@ export default function QueuePage() {
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         className={`flex items-center p-3 ${
-                          currentEpisode?.id === episode.id ? "border-[#00CCCC] bg-[#D8EFE9]/20" : ""
+                          currentEpisode?.id === episode.id ? "border-accent bg-accent/10" : ""
                         }`}
                       >
                         <div {...provided.dragHandleProps} className="mr-3 text-muted-foreground">
                           <GripVertical className="h-5 w-5" />
                         </div>
-                        <div className="h-12 w-12 rounded bg-[#9EDEDA] mr-3 flex-shrink-0">
+                        <div className="h-12 w-12 rounded bg-muted mr-3 flex-shrink-0">
                           {episode.artwork && (
                             <img
                               src={episode.artwork || "/placeholder.svg"}
@@ -64,14 +64,14 @@ export default function QueuePage() {
                             size="icon"
                             variant="ghost"
                             onClick={() => playEpisode(episode)}
-                            className="text-[#004977] hover:text-[#007187] hover:bg-[#D8EFE9]"
+                            className="text-primary hover:text-primary hover:bg-primary/10"
                           >
                             <Play className="h-4 w-4" />
                           </Button>
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="text-[#CE2090] hover:text-[#CE2090] hover:bg-[#ED9FBA]/20"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => removeFromQueue(index)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -79,7 +79,7 @@ export default function QueuePage() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="text-[#004977] hover:text-[#007187] hover:bg-[#D8EFE9]"
+                            className="text-primary hover:text-primary hover:bg-primary/10"
                           >
                             <Save className="h-4 w-4" />
                           </Button>
@@ -97,4 +97,3 @@ export default function QueuePage() {
     </div>
   )
 }
-

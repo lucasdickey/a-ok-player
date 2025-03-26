@@ -5,18 +5,20 @@ A podcast web app that allows users to add and manage RSS feeds, play episodes, 
 ## Features
 
 - User authentication with Supabase (with mock authentication option for testing)
-- RSS feed input and management
-- Podcast playback with queue management
-- Bookmarking and saving episodes
-- Playback state persistence across devices
+- RSS feed input and management with real-time feed parsing
+- Podcast episode indexing and playback
+- Episode streaming with playback controls
 - Library management for subscribed podcasts
+- "Your Stream" view of recent episodes from subscribed podcasts
+- Responsive design with modern UI
 
 ## Tech Stack
 
 - **Frontend**: Next.js, React, Tailwind CSS, shadcn/ui
 - **Backend**: Next.js API Routes
-- **Database**: Supabase (PostgreSQL)
+- **Database**: Supabase (PostgreSQL) for production, localStorage for development
 - **Authentication**: Supabase Auth with mock option for local development
+- **RSS Parsing**: rss-parser library with CORS proxy
 - **State Management**: Local Storage (for development) and Supabase (for production)
 - **Deployment**: Vercel
 
@@ -98,20 +100,37 @@ To switch between authentication modes, modify the `_app.tsx` file to use either
 
 ### RSS Feed Management
 
-The application now uses an RSS feed-based approach instead of a search-based podcast discovery:
+The application uses a comprehensive RSS feed-based approach for podcast discovery and management:
 
 1. **Adding RSS Feeds**
    - Users can input podcast RSS feed URLs directly
-   - The application fetches and parses the feed metadata
-   - Feeds are saved to the user's library
+   - The application fetches and parses the feed metadata using rss-parser
+   - A CORS proxy (allorigins.win) is used to safely fetch feeds from any source
+   - Feeds are saved to the user's library with complete metadata
 
-2. **Storage Options**
-   - **Development**: RSS feeds are stored in localStorage
-   - **Production**: RSS feeds are stored in Supabase database
+2. **Episode Indexing**
+   - All episodes from subscribed feeds are automatically indexed
+   - Episode metadata is extracted, including title, description, publication date, and audio URL
+   - Episodes are stored with references to their parent feed
 
-3. **Library Management**
-   - The library page displays all subscribed RSS feeds
-   - Users can view and manage their subscriptions
+3. **Storage Implementation**
+   - **Development**: RSS feeds and episodes are stored in localStorage
+   - **Production**: RSS feeds and episodes are stored in Supabase database
+
+4. **Library Management**
+   - The library page displays all subscribed RSS feeds in both card and list views
+   - Users can view episodes for each podcast
+   - Feed metadata is displayed, including title, description, author, and cover image
+
+5. **Your Stream**
+   - The home page displays recent episodes from all subscribed podcasts
+   - Episodes can be filtered by time period (Today, This Week, All)
+   - Users can refresh feeds to get the latest episodes
+
+6. **Playback**
+   - Episodes can be played directly from the library or stream views
+   - Audio is streamed from the original source URL
+   - Basic playback controls are implemented
 
 ## Database Schema
 
@@ -160,6 +179,17 @@ To test the RSS feed functionality:
 3. Preview the feed metadata
 4. Add the feed to your library
 5. View your subscribed feeds in the Library page
+6. Click "View Episodes" to see episodes for a specific podcast
+7. Test the "Refresh" button to update your feeds with the latest episodes
+8. Try playing an episode by clicking the play button
+
+## Known Issues and Future Improvements
+
+- **CORS Handling**: Some podcast feeds may have CORS restrictions that prevent direct fetching. The application uses a proxy service to mitigate this, but some feeds may still fail to load.
+- **Feed Compatibility**: The RSS parser handles most standard podcast feeds, but some feeds with non-standard formats may not parse correctly.
+- **Playback Queue**: The queue functionality is currently limited. Future updates will include a more robust queue management system.
+- **Offline Support**: Adding offline support for downloaded episodes is planned for future releases.
+- **Transcript Search**: Future versions will include transcript search capabilities for podcast content.
 
 ## License
 
