@@ -77,9 +77,8 @@ export default function PlayerProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     if (!audioRef.current || !currentEpisode) return
 
-    // In a real app, this would be the actual audio URL
-    // For demo purposes, we'll use a sample audio file
-    audioRef.current.src = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    // Use the actual audio URL from the episode
+    audioRef.current.src = currentEpisode.audioUrl || ""
     audioRef.current.playbackRate = playbackRate
     audioRef.current.volume = volume
 
@@ -240,4 +239,3 @@ export function usePlayer() {
   }
   return context
 }
-

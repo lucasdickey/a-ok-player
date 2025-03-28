@@ -6,17 +6,26 @@ import { Button } from "@/components/ui/button"
 import { PlusCircle, Loader2, Check, AlertCircle, Info } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/components/auth/auth-provider"
-import { fetchRSSFeed, saveRSSFeedUrl, updateRSSFeedMetadata, SavedRSSFeed } from "../../lib/rss-service"
+import { validateFeed, addFeed } from "@/lib/feed-processor"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
 
-export default function AddRSSFeedPage() {
-  const [feedUrl, setFeedUrl] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isFetching, setIsFetching] = useState(false)
-  const [feedPreview, setFeedPreview] = useState<any | null>(null)
-  const [savedFeed, setSavedFeed] = useState<SavedRSSFeed | null>(null)
+type FeedValidationStatus = "idle" | "validating" | "valid" | "invalid"
+
+interface FeedMetadata {
+  title: string
+  description?: string
+  author?: string
+  imageUrl?: string
+  websiteUrl?: string
+}
+
+export default function SearchPage() {
+  const [query, setQuery] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
+  const [feedValidationStatus, setFeedValidationStatus] = useState<FeedValidationStatus>("idle")
+  const [feedMetadata, setFeedMetadata] = useState<FeedMetadata | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const { toast } = useToast()
@@ -24,168 +33,84 @@ export default function AddRSSFeedPage() {
   const router = useRouter()
 
   const handleSaveFeedUrl = async () => {
-    if (!feedUrl.trim()) {
-      setError("Please enter a valid RSS feed URL")
-      return
-    }
-
     if (!user) {
-      setError("You must be logged in to add feeds")
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to add a podcast feed",
+        variant: "destructive"
+      })
       return
     }
 
-    setIsLoading(true)
+    if (!query) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid RSS feed URL",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsSearching(true)
     setError(null)
-    setSuccess(false)
-
+    
     try {
-      // Validate URL format
-      try {
-        new URL(feedUrl)
-      } catch (urlError) {
-        setError("Please enter a valid URL (including http:// or https://)")
-        setIsLoading(false)
+      // First validate the feed
+      const validationResult = await validateFeed(query)
+      
+      if (!validationResult.isValid) {
+        setFeedValidationStatus("invalid")
+        setError(validationResult.message)
+        toast({
+          title: "Invalid Feed",
+          description: validationResult.message,
+          variant: "destructive"
+        })
         return
       }
       
-      // Save the feed URL first
-      const saveResult = await saveRSSFeedUrl(user.id, feedUrl)
-      
-      if (saveResult.error) {
-        setError(saveResult.error.message || "Error saving feed URL")
-        setIsLoading(false)
-        return
-      }
-      
-      // Store the saved feed
-      setSavedFeed(saveResult.data)
-      
-      toast({
-        title: "Feed URL saved",
-        description: "The feed URL has been saved to your library. Fetching metadata...",
+      setFeedValidationStatus("valid")
+      setFeedMetadata({
+        title: validationResult.metadata?.title || "Unknown Podcast",
+        description: validationResult.metadata?.description,
+        author: validationResult.metadata?.author,
+        imageUrl: validationResult.metadata?.imageUrl,
+        websiteUrl: validationResult.metadata?.websiteUrl
       })
       
-      // Now fetch the metadata
-      setIsFetching(true)
-      fetchFeedMetadata(feedUrl, saveResult.data?.id)
-    } catch (err: any) {
-      console.error("Error saving feed URL:", err)
-      setError(err.message || "Error saving feed URL. Please try again.")
-      setIsLoading(false)
-    }
-  }
-  
-  const fetchFeedMetadata = async (url: string, feedId?: string) => {
-    try {
-      // Set a timeout to prevent infinite loading
-      const fetchTimeout = setTimeout(() => {
-        if (isFetching) {
-          setIsFetching(false)
-          setIsLoading(false)
-          toast({
-            title: "Feed saved but metadata fetch timed out",
-            description: "Your feed was saved but we couldn't fetch the details. You can try refreshing later.",
-          })
-        }
-      }, 20000) // 20 second timeout
+      // Add the feed
+      const result = await addFeed(user.id, query)
       
-      const feedData = await fetchRSSFeed(url)
-      
-      clearTimeout(fetchTimeout)
-      
-      if (feedData) {
-        setFeedPreview(feedData)
-        
-        // Update the feed metadata if we have a feed ID
-        if (feedId) {
-          await updateRSSFeedMetadata(feedId, feedData)
-        }
-        
+      if (result.success) {
+        setSuccess(true)
         toast({
-          title: "Feed fetched successfully",
-          description: `Found podcast: ${feedData.title}`,
+          title: "Success",
+          description: "Podcast added to your library",
         })
+        
+        // Redirect to library after a short delay
+        setTimeout(() => {
+          router.push("/library")
+        }, 1500)
       } else {
+        setError(result.message)
         toast({
-          title: "Feed saved with errors",
-          description: "The feed URL was saved but we couldn't fetch the podcast details. You can try refreshing later.",
+          title: "Error",
+          description: result.message,
+          variant: "destructive"
         })
-        
-        if (feedId) {
-          await updateRSSFeedMetadata(feedId, null, "Failed to fetch feed metadata")
-        }
       }
-    } catch (err: any) {
-      console.error("Error fetching feed metadata:", err)
+    } catch (error) {
+      console.error("Error adding feed:", error)
+      setError("An unexpected error occurred")
       toast({
-        title: "Feed saved with errors",
-        description: err.message || "Error fetching podcast details. The URL was saved but details couldn't be loaded.",
+        title: "Error",
+        description: "Failed to add podcast feed",
+        variant: "destructive"
       })
-      
-      if (feedId) {
-        await updateRSSFeedMetadata(feedId, null, err.message || "Error fetching feed")
-      }
     } finally {
-      setIsFetching(false)
-      setIsLoading(false)
+      setIsSearching(false)
     }
-  }
-
-  const handleAddToLibrary = async () => {
-    // If we've already saved the feed URL and have a feed ID, just navigate to library
-    if (savedFeed) {
-      toast({
-        title: "Success!",
-        description: "The podcast has been added to your library.",
-      })
-      
-      // Navigate to library after a short delay
-      setTimeout(() => {
-        router.push('/library')
-      }, 1500)
-      return
-    }
-    
-    // Otherwise, save the feed URL and fetch metadata
-    handleSaveFeedUrl()
-  }
-
-  const handleTryPopularFeed = (url: string) => {
-    setFeedUrl(url)
-    // Auto-submit the form
-    const fetchFeed = async () => {
-      setIsLoading(true)
-      setIsFetching(true)
-      setError(null)
-      setFeedPreview(null)
-      setSuccess(false)
-      setSavedFeed(null)
-      
-      try {
-        const feedData = await fetchRSSFeed(url)
-        
-        if (!feedData) {
-          setError("Unable to fetch podcast data from this URL. Please try another feed.")
-          setIsLoading(false)
-          setIsFetching(false)
-          return
-        }
-        
-        setFeedPreview(feedData)
-        toast({
-          title: "Feed fetched successfully",
-          description: `Found podcast: ${feedData.title}`,
-        })
-      } catch (err: any) {
-        console.error("Error fetching feed:", err)
-        setError(err.message || "Error fetching feed. Please try a different URL.")
-      } finally {
-        setIsLoading(false)
-        setIsFetching(false)
-      }
-    }
-    
-    fetchFeed()
   }
 
   return (
@@ -195,33 +120,35 @@ export default function AddRSSFeedPage() {
         Enter the URL of a podcast RSS feed to add it to your library
       </p>
 
-      <form onSubmit={(e) => { e.preventDefault(); handleSaveFeedUrl(); }} className="flex w-full gap-2">
+      <div className="flex space-x-2">
         <Input
-          type="text"
-          placeholder="https://feeds.example.com/podcast.xml"
-          value={feedUrl}
-          onChange={(e) => setFeedUrl(e.target.value)}
+          placeholder="Enter podcast RSS feed URL"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           className="flex-1"
-          disabled={isLoading}
         />
         <Button 
-          type="submit" 
-          className="bg-[#c32b1a] hover:bg-[#a82315]"
-          disabled={isLoading}
+          onClick={handleSaveFeedUrl} 
+          disabled={isSearching || !query || success}
         >
-          {isLoading ? (
+          {isSearching ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              {isFetching ? "Fetching..." : "Saving..."}
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Checking...
+            </>
+          ) : feedValidationStatus === "valid" ? (
+            <>
+              <Check className="mr-2 h-4 w-4" />
+              Add Feed
             </>
           ) : (
             <>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Fetch Feed
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Feed
             </>
           )}
         </Button>
-      </form>
+      </div>
 
       {error && (
         <Alert variant="destructive">
@@ -230,59 +157,43 @@ export default function AddRSSFeedPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
-      {savedFeed && !feedPreview && !error && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Feed URL Saved</AlertTitle>
-          <AlertDescription>
-            The feed URL has been saved to your library. We're still trying to fetch the podcast details.
-          </AlertDescription>
-        </Alert>
-      )}
 
-      {feedPreview && (
+      {feedValidationStatus === "valid" && feedMetadata && (
         <Card>
           <CardHeader>
-            <CardTitle>{feedPreview.title}</CardTitle>
-            <CardDescription>{feedPreview.author}</CardDescription>
+            <CardTitle>{feedMetadata.title}</CardTitle>
+            <CardDescription>{feedMetadata.author}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4">
-              {feedPreview.imageUrl && (
-                <div className="w-24 h-24 rounded overflow-hidden flex-shrink-0">
-                  <img 
-                    src={feedPreview.imageUrl} 
-                    alt={feedPreview.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+            <div className="flex space-x-4">
+              {feedMetadata.imageUrl && (
+                <img 
+                  src={feedMetadata.imageUrl} 
+                  alt={feedMetadata.title} 
+                  className="w-24 h-24 object-cover rounded"
+                />
               )}
               <div>
-                <p className="text-sm text-muted-foreground">{feedPreview.description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {feedMetadata.description || "No description available"}
+                </p>
               </div>
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
-              onClick={handleAddToLibrary} 
-              className="bg-[#c32b1a] hover:bg-[#a82315] w-full"
-              disabled={isLoading || success}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isFetching ? "Fetching Details..." : "Adding to Library..."}
-                </>
-              ) : savedFeed ? (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Added to Library
-                </>
-              ) : (
-                "Add to Library"
-              )}
-            </Button>
+            {success ? (
+              <Alert>
+                <Check className="h-4 w-4" />
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>
+                  Podcast added to your library. Redirecting...
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Click "Add Feed" to add this podcast to your library
+              </p>
+            )}
           </CardFooter>
         </Card>
       )}
@@ -293,27 +204,27 @@ export default function AddRSSFeedPage() {
           <FeedSuggestion 
             title="This American Life" 
             url="https://www.thisamericanlife.org/podcast/rss.xml" 
-            onSelect={handleTryPopularFeed}
+            onSelect={(url) => setQuery(url)}
           />
           <FeedSuggestion 
             title="The Daily (New York Times)" 
             url="https://feeds.simplecast.com/54nAGcIl" 
-            onSelect={handleTryPopularFeed}
+            onSelect={(url) => setQuery(url)}
           />
           <FeedSuggestion 
             title="Planet Money (NPR)" 
             url="https://feeds.npr.org/510289/podcast.xml" 
-            onSelect={handleTryPopularFeed}
+            onSelect={(url) => setQuery(url)}
           />
           <FeedSuggestion 
             title="TED Talks Daily" 
             url="https://feeds.megaphone.fm/TPG6175046888" 
-            onSelect={handleTryPopularFeed}
+            onSelect={(url) => setQuery(url)}
           />
           <FeedSuggestion 
             title="Radiolab" 
             url="https://feeds.simplecast.com/DGRPxE8O" 
-            onSelect={handleTryPopularFeed}
+            onSelect={(url) => setQuery(url)}
           />
         </div>
       </div>
@@ -337,7 +248,6 @@ function FeedSuggestion({ title, url, onSelect }: FeedSuggestionProps) {
       <Button 
         variant="outline" 
         size="sm"
-        className="bg-[#c32b1a] hover:bg-[#a82315]"
         onClick={() => onSelect(url)}
       >
         Use

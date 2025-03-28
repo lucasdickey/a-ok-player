@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './auth/auth-provider'
-import { parseFeed } from '@/lib/rss-parser'
+import { validateFeed, addFeed } from '@/lib/feed-processor'
 
 export default function AddFeedForm({ onSuccess }: { onSuccess?: () => void }) {
   const [feedUrl, setFeedUrl] = useState('')
@@ -30,25 +30,28 @@ export default function AddFeedForm({ onSuccess }: { onSuccess?: () => void }) {
     setIsLoading(true)
 
     try {
-      // Parse the RSS feed to get podcast details
-      const { podcast } = await parseFeed(feedUrl)
+      // Validate the feed first
+      const validationResult = await validateFeed(feedUrl)
       
-      // Add the subscription to the database
-      const { error } = await supabase
-        .from('podcast_subscriptions')
-        .insert({
-          user_id: user.id,
-          feed_url: feedUrl,
-          title: podcast.title
+      if (!validationResult.isValid) {
+        toast({
+          title: "Invalid feed",
+          description: validationResult.message || "Please check the URL and try again.",
+          variant: "destructive"
         })
+        return
+      }
       
-      if (error) {
-        throw error
+      // Add the feed to the user's subscriptions
+      const result = await addFeed(user.id, feedUrl)
+      
+      if (!result.success) {
+        throw new Error(result.message || "Failed to add podcast")
       }
       
       toast({
         title: "Podcast added!",
-        description: `Successfully added "${podcast.title}" to your library.`
+        description: `Successfully added "${validationResult.metadata?.title}" to your library.`
       })
       
       setFeedUrl('')

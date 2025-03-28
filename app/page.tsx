@@ -1,16 +1,38 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getUserRSSFeeds, SavedRSSFeed, getRecentEpisodes, RSSFeedEpisode, refreshUserFeeds } from "@/lib/rss-service"
+import { getUserFeeds, getRecentEpisodes, refreshAllFeeds } from "@/lib/feed-processor"
+import { PodcastFeed } from "@/lib/feed-processor"
 import { useAuth } from "@/components/auth/auth-provider"
 import { RecentlyPlayed } from "@/components/recently-played"
 import Link from "next/link"
 import { Calendar, Clock, Headphones, Play, PlusCircle, Radio, RefreshCw } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
+
+// Define types for episodes
+interface Episode {
+  id: string;
+  feed_id: string;
+  guid: string;
+  title: string;
+  description: string | null;
+  published_date: string | null;
+  duration: number | null;
+  duration_formatted?: string;
+  audio_url: string;
+  image_url: string | null;
+  is_played: boolean;
+  podcast_feeds?: {
+    id: string;
+    title: string | null;
+    image_url: string | null;
+    author: string | null;
+  };
+}
 
 export default function StreamPage() {
   const { user } = useAuth()
@@ -18,268 +40,248 @@ export default function StreamPage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [feeds, setFeeds] = useState<SavedRSSFeed[]>([])
-  const [episodes, setEpisodes] = useState<RSSFeedEpisode[]>([])
+  const [feeds, setFeeds] = useState<PodcastFeed[]>([])
+  const [recentEpisodes, setRecentEpisodes] = useState<Episode[]>([])
 
-  // Load feeds and episodes when component mounts or user changes
+  // Load content when the component mounts or user changes
   useEffect(() => {
-    if (user) {
-      console.log('Stream page - Getting feeds for user:', user.id);
-      loadUserContent();
-    } else {
-      setFeeds([]);
-      setEpisodes([]);
-      setIsLoading(false);
+    if (!user) {
+      router.push('/auth')
+      return
     }
-  }, [user]);
-
-  const loadUserContent = async () => {
-    setIsLoading(true);
     
-    try {
-      // Get user's feeds
-      const userFeeds = getUserRSSFeeds(user!.id);
-      setFeeds(userFeeds);
+    const loadContent = async () => {
+      setIsLoading(true)
       
-      // Get recent episodes
-      const recentEpisodes = getRecentEpisodes(user!.id);
-      setEpisodes(recentEpisodes);
-    } catch (error) {
-      console.error('Error loading user content:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load your content. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+      try {
+        // Get user's feeds
+        const userFeeds = await getUserFeeds(user.id)
+        setFeeds(userFeeds)
+        
+        // Get recent episodes
+        const episodes = await getRecentEpisodes(user.id)
+        setRecentEpisodes(episodes)
+      } catch (error) {
+        console.error('Error loading content:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load content',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
-  };
-
-  const handleRefreshFeeds = async () => {
-    if (!user) return;
     
-    setIsRefreshing(true);
+    loadContent()
+  }, [user, router, toast])
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (!user) return
+    
+    setIsRefreshing(true)
     
     try {
-      await refreshUserFeeds(user.id);
+      await refreshAllFeeds(user.id)
       
       // Reload content after refresh
-      const userFeeds = getUserRSSFeeds(user.id);
-      setFeeds(userFeeds);
+      const userFeeds = await getUserFeeds(user.id)
+      setFeeds(userFeeds)
       
-      const recentEpisodes = getRecentEpisodes(user.id);
-      setEpisodes(recentEpisodes);
+      const episodes = await getRecentEpisodes(user.id)
+      setRecentEpisodes(episodes)
       
       toast({
-        title: "Feeds refreshed",
-        description: "Your podcast feeds have been updated with the latest episodes."
-      });
+        title: 'Success',
+        description: 'Content refreshed successfully',
+      })
     } catch (error) {
-      console.error('Error refreshing feeds:', error);
+      console.error('Error refreshing content:', error)
       toast({
-        title: "Error",
-        description: "Failed to refresh your feeds. Please try again.",
-        variant: "destructive"
-      });
+        title: 'Error',
+        description: 'Failed to refresh content',
+        variant: 'destructive',
+      })
     } finally {
-      setIsRefreshing(false);
+      setIsRefreshing(false)
     }
-  };
-
-  const handleAddRSSFeed = () => {
-    router.push('/search');
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (!user) {
+    return null
   }
 
-  return (
-    <div className="container py-6 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Your Stream</h1>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleRefreshFeeds}
-            disabled={isRefreshing || isLoading}
-            className="border-[#c32b1a] text-[#c32b1a] hover:bg-[#c32b1a]/10"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-          <Button onClick={handleAddRSSFeed} className="bg-[#c32b1a] hover:bg-[#a82315]">
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add RSS Feed
-          </Button>
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
-
-      {isLoading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i} className="w-full animate-pulse">
-              <CardHeader className="p-4">
-                <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-muted rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="h-4 bg-muted rounded w-full mb-2"></div>
-                <div className="h-4 bg-muted rounded w-full mb-2"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : feeds.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-          <Radio className="h-12 w-12 mb-4 text-primary" />
-          <h2 className="text-xl font-medium mb-2">Your stream is empty</h2>
-          <p className="mb-4">Subscribe to podcasts to see their latest episodes here</p>
-          <Button onClick={handleAddRSSFeed} className="bg-[#c32b1a] hover:bg-[#a82315]">
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add RSS Feed
-          </Button>
-        </div>
-      ) : episodes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-          <Clock className="h-12 w-12 mb-4 text-primary" />
-          <h2 className="text-xl font-medium mb-2">No recent episodes</h2>
-          <p className="mb-4">Your subscribed podcasts haven't published new episodes recently</p>
-          <Button onClick={() => router.push('/library')} className="bg-[#c32b1a] hover:bg-[#a82315]">
-            <Headphones className="h-4 w-4 mr-2" />
-            Go to Your Library
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">All Episodes</TabsTrigger>
-              <TabsTrigger value="today">Today</TabsTrigger>
-              <TabsTrigger value="week">This Week</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all" className="space-y-4">
-              {episodes.map((episode) => (
-                <EpisodeCard key={episode.id} episode={episode} />
-              ))}
-            </TabsContent>
-            
-            <TabsContent value="today" className="space-y-4">
-              {episodes
-                .filter(episode => {
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const pubDate = new Date(episode.pubDate);
-                  return pubDate >= today;
-                })
-                .map((episode) => (
-                  <EpisodeCard key={episode.id} episode={episode} />
-                ))}
-            </TabsContent>
-            
-            <TabsContent value="week" className="space-y-4">
-              {episodes
-                .filter(episode => {
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  weekAgo.setHours(0, 0, 0, 0);
-                  const pubDate = new Date(episode.pubDate);
-                  return pubDate >= weekAgo;
-                })
-                .map((episode) => (
-                  <EpisodeCard key={episode.id} episode={episode} />
-                ))}
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
-
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-foreground">Recently Played</h2>
-        <RecentlyPlayed />
-      </section>
-    </div>
-  )
-}
-
-interface EpisodeCardProps {
-  episode: RSSFeedEpisode;
-}
-
-function EpisodeCard({ episode }: EpisodeCardProps) {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    )
   }
-  
-  // Find the feed for this episode to get podcast title
-  const [podcastTitle, setPodcastTitle] = useState<string>('');
-  
-  useEffect(() => {
-    // Get feed info from localStorage
-    try {
-      const storedFeeds = localStorage.getItem('rssFeeds');
-      if (storedFeeds) {
-        const feeds = JSON.parse(storedFeeds);
-        const feed = feeds.find((f: SavedRSSFeed) => f.id === episode.feedId);
-        if (feed) {
-          setPodcastTitle(feed.title);
-        }
-      }
-    } catch (error) {
-      console.error('Error getting podcast title:', error);
-    }
-  }, [episode.feedId]);
-  
+
   return (
-    <Card className="w-full hover:shadow-md transition-shadow">
-      <div className="flex p-4">
-        <div className="h-20 w-20 rounded bg-muted mr-4 flex-shrink-0">
-          {episode.imageUrl ? (
-            <img 
-              src={episode.imageUrl} 
-              alt={podcastTitle} 
-              className="h-full w-full object-cover rounded"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-primary">
-              <Radio className="h-8 w-8 text-primary-foreground" />
-            </div>
-          )}
-        </div>
-        
-        <div className="flex-grow min-w-0">
-          <h3 className="font-medium text-foreground line-clamp-1">{episode.title}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-1">{podcastTitle}</p>
-          <p className="text-xs text-muted-foreground mt-1 flex items-center">
-            <Calendar className="h-3 w-3 mr-1 inline" />
-            {formatDate(episode.pubDate)}
-            {episode.duration && (
-              <>
-                <span className="mx-2">•</span>
-                <Clock className="h-3 w-3 mr-1 inline" />
-                {episode.duration}
-              </>
-            )}
-          </p>
-          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-            {episode.description ? episode.description.replace(/<[^>]*>/g, '') : 'No description available'}
-          </p>
-        </div>
-        
+    <div className="container py-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Home</h1>
         <Button 
-          variant="ghost" 
-          size="icon" 
-          className="ml-2 flex-shrink-0 self-center text-[#c32b1a] hover:text-[#c32b1a] hover:bg-[#c32b1a]/10"
-          onClick={() => window.open(episode.audioUrl, '_blank')}
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh}
+          disabled={isRefreshing}
         >
-          <Play className="h-5 w-5" />
+          {isRefreshing ? (
+            <>
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </>
+          )}
         </Button>
       </div>
-    </Card>
+
+      <Tabs defaultValue="recent" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="recent">Recent</TabsTrigger>
+          <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="recent" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {recentEpisodes.length > 0 ? (
+              recentEpisodes.slice(0, 6).map((episode) => (
+                <Card key={episode.id} className="overflow-hidden">
+                  <div className="aspect-video relative">
+                    <img 
+                      src={episode.image_url || '/images/placeholder-podcast.png'} 
+                      alt={episode.title} 
+                      className="object-cover w-full h-full"
+                    />
+                    <Button 
+                      variant="default" 
+                      size="icon" 
+                      className="absolute bottom-2 right-2 rounded-full"
+                      onClick={() => {
+                        toast({
+                          title: "Playing",
+                          description: `Now playing ${episode.title}`,
+                        })
+                      }}
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold truncate">{episode.title}</h3>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {episode.podcast_feeds?.title || 'Unknown Podcast'}
+                    </p>
+                    <div className="flex items-center mt-2 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 mr-1" />
+                      <span>{episode.duration_formatted || '0:00'}</span>
+                      <Calendar className="h-3 w-3 ml-3 mr-1" />
+                      <span>
+                        {episode.published_date 
+                          ? new Date(episode.published_date).toLocaleDateString() 
+                          : 'Unknown date'}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <Radio className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-medium">No Recent Episodes</h3>
+                <p className="text-muted-foreground mt-2">
+                  Subscribe to podcasts to see recent episodes here
+                </p>
+                <Button asChild className="mt-4">
+                  <Link href="/feeds/add">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Podcast
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {recentEpisodes.length > 0 && (
+            <div className="flex justify-center">
+              <Button variant="outline" asChild>
+                <Link href="/library">
+                  <Headphones className="mr-2 h-4 w-4" />
+                  View All Episodes
+                </Link>
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="subscriptions" className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {feeds.length > 0 ? (
+              feeds.map((feed) => (
+                <Card key={feed.id} className="overflow-hidden">
+                  <div className="aspect-square relative">
+                    <img 
+                      src={feed.image_url || '/images/placeholder-podcast.png'} 
+                      alt={feed.title || 'Podcast'} 
+                      className="object-cover w-full h-full"
+                    />
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold truncate">{feed.title}</h3>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {feed.author || 'Unknown Author'}
+                    </p>
+                  </CardContent>
+                  <CardFooter className="p-4 pt-0 flex justify-between">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      asChild
+                    >
+                      <Link href={`/feeds/${feed.id}`}>
+                        View Episodes
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <Radio className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-medium">No Subscriptions</h3>
+                <p className="text-muted-foreground mt-2">
+                  Add podcast feeds to see them here
+                </p>
+                <Button asChild className="mt-4">
+                  <Link href="/feeds/add">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Podcast
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          {feeds.length > 0 && (
+            <div className="flex justify-center">
+              <Button variant="outline" asChild>
+                <Link href="/feeds">
+                  <Radio className="mr-2 h-4 w-4" />
+                  View All Podcasts
+                </Link>
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }

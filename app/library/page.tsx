@@ -1,15 +1,31 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getUserRSSFeeds, SavedRSSFeed, getFeedEpisodes, RSSFeedEpisode, refreshUserFeeds } from "@/lib/rss-service"
-import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getUserFeeds, getFeedEpisodes, refreshFeed } from "@/lib/feed-processor"
+import { PodcastFeed } from "@/lib/feed-processor"
+import { useAuth } from "@/components/auth/auth-provider"
+import Link from "next/link"
+import { Calendar, Clock, Headphones, Play, PlusCircle, Radio, RefreshCw } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { Calendar, Clock, Headphones, ListMusic, Play, PlusCircle, Radio, RefreshCw } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+// Define types for episodes
+interface Episode {
+  id: string;
+  feed_id: string;
+  guid: string;
+  title: string;
+  description: string | null;
+  published_date: string | null;
+  duration: number | null;
+  duration_formatted?: string;
+  audio_url: string;
+  image_url: string | null;
+  is_played: boolean;
+}
 
 export default function LibraryPage() {
   const { user } = useAuth()
@@ -17,284 +33,333 @@ export default function LibraryPage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [feeds, setFeeds] = useState<SavedRSSFeed[]>([])
-  const [viewType, setViewType] = useState<"card" | "list">("card")
-  const [selectedFeed, setSelectedFeed] = useState<SavedRSSFeed | null>(null)
-  const [feedEpisodes, setFeedEpisodes] = useState<RSSFeedEpisode[]>([])
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedFeed, setSelectedFeed] = useState<string | null>(null)
+  const [feeds, setFeeds] = useState<PodcastFeed[]>([])
+  const [episodes, setEpisodes] = useState<Episode[]>([])
 
-  // Load feeds when component mounts or user changes
+  // Load feeds when the component mounts or user changes
   useEffect(() => {
-    if (user) {
-      console.log('Library page - Getting feeds for user:', user.id);
-      loadUserFeeds();
-    } else {
-      setFeeds([]);
-      setIsLoading(false);
+    if (!user) {
+      router.push('/auth')
+      return
     }
-  }, [user]);
+    
+    const loadFeeds = async () => {
+      setIsLoading(true)
+      
+      try {
+        const userFeeds = await getUserFeeds(user.id)
+        setFeeds(userFeeds)
+        
+        // If there are feeds, select the first one by default
+        if (userFeeds.length > 0) {
+          setSelectedFeed(userFeeds[0].id)
+          const feedEpisodes = await getFeedEpisodes(userFeeds[0].id)
+          setEpisodes(feedEpisodes)
+        }
+      } catch (error) {
+        console.error('Error loading feeds:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load your podcast feeds',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadFeeds()
+  }, [user, router, toast])
 
-  const loadUserFeeds = () => {
-    setIsLoading(true);
+  // Load episodes when the selected feed changes
+  useEffect(() => {
+    if (!selectedFeed) return
+    
+    const loadEpisodes = async () => {
+      setIsLoading(true)
+      
+      try {
+        const feedEpisodes = await getFeedEpisodes(selectedFeed)
+        setEpisodes(feedEpisodes)
+      } catch (error) {
+        console.error('Error loading episodes:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to load episodes',
+          variant: 'destructive',
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadEpisodes()
+  }, [selectedFeed, toast])
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (!user || !selectedFeed) return
+    
+    setIsRefreshing(true)
     
     try {
-      const userFeeds = getUserRSSFeeds(user!.id);
-      setFeeds(userFeeds);
-    } catch (error) {
-      console.error('Error loading user feeds:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load your podcast library. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRefreshFeeds = async () => {
-    if (!user) return;
-    
-    setIsRefreshing(true);
-    
-    try {
-      await refreshUserFeeds(user.id);
+      await refreshFeed(user.id, selectedFeed)
       
-      // Reload feeds after refresh
-      const userFeeds = getUserRSSFeeds(user.id);
-      setFeeds(userFeeds);
+      // Reload episodes after refresh
+      const feedEpisodes = await getFeedEpisodes(selectedFeed)
+      setEpisodes(feedEpisodes)
       
       toast({
-        title: "Feeds refreshed",
-        description: "Your podcast feeds have been updated with the latest episodes."
-      });
+        title: 'Success',
+        description: 'Podcast refreshed successfully',
+      })
     } catch (error) {
-      console.error('Error refreshing feeds:', error);
+      console.error('Error refreshing feed:', error)
       toast({
-        title: "Error",
-        description: "Failed to refresh your feeds. Please try again.",
-        variant: "destructive"
-      });
+        title: 'Error',
+        description: 'Failed to refresh podcast',
+        variant: 'destructive',
+      })
     } finally {
-      setIsRefreshing(false);
+      setIsRefreshing(false)
     }
-  };
-
-  const handleAddRSSFeed = () => {
-    router.push('/search');
   }
 
-  const handleViewEpisodes = (feed: SavedRSSFeed) => {
-    setSelectedFeed(feed);
-    const episodes = getFeedEpisodes(feed.id);
-    setFeedEpisodes(episodes);
-    setIsDialogOpen(true);
+  if (!user) {
+    return null
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (isLoading && feeds.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    )
   }
+
+  const selectedPodcast = feeds.find(feed => feed.id === selectedFeed)
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Your Library</h1>
-        <div className="flex gap-2">
+    <div className="container py-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Library</h1>
+        <div className="flex space-x-2">
           <Button 
             variant="outline" 
-            onClick={handleRefreshFeeds}
-            disabled={isRefreshing || isLoading}
-            className="border-[#c32b1a] text-[#c32b1a] hover:bg-[#c32b1a]/10"
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={isRefreshing || !selectedFeed}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            {isRefreshing ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </>
+            )}
           </Button>
-          <Button onClick={handleAddRSSFeed} className="bg-[#c32b1a] hover:bg-[#a82315]">
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Add RSS Feed
+          <Button asChild size="sm">
+            <Link href="/feeds/add">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Podcast
+            </Link>
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="card" className="w-full" onValueChange={(value) => setViewType(value as "card" | "list")}>
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="card">Card View</TabsTrigger>
-            <TabsTrigger value="list">List View</TabsTrigger>
-          </TabsList>
+      {feeds.length === 0 ? (
+        <div className="text-center py-12">
+          <Radio className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-medium">Your library is empty</h2>
+          <p className="text-muted-foreground mt-2 mb-6">
+            Add podcast feeds to start building your library
+          </p>
+          <Button asChild>
+            <Link href="/feeds/add">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Podcast
+            </Link>
+          </Button>
         </div>
-
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="p-4">
-                  <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-muted rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="flex gap-4">
-                    <div className="w-24 h-24 bg-muted rounded"></div>
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-muted rounded w-full"></div>
-                      <div className="h-4 bg-muted rounded w-full"></div>
-                      <div className="h-4 bg-muted rounded w-3/4"></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : feeds.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-            <Headphones className="h-12 w-12 mb-4 text-primary" />
-            <h2 className="text-xl font-medium mb-2">Your library is empty</h2>
-            <p className="mb-4">Add some podcasts to get started</p>
-            <Button onClick={handleAddRSSFeed} className="bg-[#c32b1a] hover:bg-[#a82315]">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add RSS Feed
-            </Button>
-          </div>
-        ) : (
-          <>
-            <TabsContent value="card" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="md:col-span-1">
+            <div className="space-y-2">
+              <h2 className="text-lg font-medium">Your Podcasts</h2>
+              <div className="space-y-1">
                 {feeds.map((feed) => (
-                  <Card key={feed.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                    <CardHeader className="p-4 pb-2">
-                      <CardTitle className="line-clamp-1">{feed.title}</CardTitle>
-                      <CardDescription className="line-clamp-1">{feed.author || 'Unknown Author'}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="flex gap-4">
-                        <div className="w-24 h-24 rounded overflow-hidden flex-shrink-0">
-                          {feed.imageUrl ? (
-                            <img 
-                              src={feed.imageUrl} 
-                              alt={feed.title} 
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-primary">
-                              <Radio className="h-8 w-8 text-primary-foreground" />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground line-clamp-3">
-                            {feed.description || 'No description available'}
-                          </p>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="mt-2 p-0 h-auto text-[#c32b1a] hover:text-[#c32b1a] hover:bg-transparent"
-                            onClick={() => handleViewEpisodes(feed)}
-                          >
-                            <ListMusic className="h-3 w-3 mr-1" />
-                            View Episodes
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="list" className="mt-0">
-              <div className="space-y-2">
-                {feeds.map((feed) => (
-                  <div 
-                    key={feed.id} 
-                    className="flex items-center p-3 hover:bg-muted rounded-lg transition-colors"
+                  <Button
+                    key={feed.id}
+                    variant={selectedFeed === feed.id ? "default" : "ghost"}
+                    className="w-full justify-start"
+                    onClick={() => setSelectedFeed(feed.id)}
                   >
-                    <div className="w-12 h-12 rounded overflow-hidden mr-4 flex-shrink-0">
-                      {feed.imageUrl ? (
+                    <div className="flex items-center w-full">
+                      <div className="h-6 w-6 rounded mr-2 overflow-hidden">
                         <img 
-                          src={feed.imageUrl} 
-                          alt={feed.title} 
-                          className="w-full h-full object-cover"
+                          src={feed.image_url || '/images/placeholder-podcast.png'} 
+                          alt={feed.title || 'Podcast'} 
+                          className="h-full w-full object-cover"
                         />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-primary">
-                          <Radio className="h-6 w-6 text-primary-foreground" />
-                        </div>
-                      )}
+                      </div>
+                      <span className="truncate">{feed.title}</span>
                     </div>
-                    <div className="flex-grow min-w-0">
-                      <h3 className="font-medium text-foreground line-clamp-1">{feed.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-1">{feed.author || 'Unknown Author'}</p>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="ml-2 text-[#c32b1a] hover:text-[#c32b1a] hover:bg-[#c32b1a]/10"
-                      onClick={() => handleViewEpisodes(feed)}
-                    >
-                      <ListMusic className="h-4 w-4 mr-2" />
-                      Episodes
-                    </Button>
-                  </div>
+                  </Button>
                 ))}
               </div>
-            </TabsContent>
-          </>
-        )}
-      </Tabs>
-
-      {/* Episodes Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedFeed?.title} - Episodes</DialogTitle>
-            <DialogDescription>
-              {selectedFeed?.author && `By ${selectedFeed.author}`}
-            </DialogDescription>
-          </DialogHeader>
+            </div>
+          </div>
           
-          {feedEpisodes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
-              <Clock className="h-10 w-10 mb-3 text-primary" />
-              <h3 className="text-lg font-medium mb-1">No episodes found</h3>
-              <p className="text-sm">Try refreshing the feed to get the latest episodes</p>
-            </div>
-          ) : (
-            <div className="space-y-4 mt-4">
-              {feedEpisodes.map((episode) => (
-                <Card key={episode.id} className="w-full hover:shadow-sm transition-shadow">
-                  <div className="p-4">
-                    <h3 className="font-medium text-foreground">{episode.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                      <Calendar className="h-3 w-3 mr-1 inline" />
-                      {formatDate(episode.pubDate)}
-                      {episode.duration && (
-                        <>
-                          <span className="mx-2">•</span>
-                          <Clock className="h-3 w-3 mr-1 inline" />
-                          {episode.duration}
-                        </>
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
-                      {episode.description ? episode.description.replace(/<[^>]*>/g, '') : 'No description available'}
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-3 text-[#c32b1a] border-[#c32b1a] hover:bg-[#c32b1a]/10 hover:text-[#c32b1a]"
-                      onClick={() => window.open(episode.audioUrl, '_blank')}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Play Episode
-                    </Button>
+          <div className="md:col-span-3">
+            {selectedPodcast ? (
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="h-24 w-24 rounded overflow-hidden">
+                    <img 
+                      src={selectedPodcast.image_url || '/images/placeholder-podcast.png'} 
+                      alt={selectedPodcast.title || 'Podcast'} 
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                  <div>
+                    <h2 className="text-2xl font-bold">{selectedPodcast.title}</h2>
+                    <p className="text-muted-foreground">{selectedPodcast.author}</p>
+                    <p className="text-sm mt-2">{selectedPodcast.description}</p>
+                  </div>
+                </div>
+                
+                <Tabs defaultValue="all" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="all">All Episodes</TabsTrigger>
+                    <TabsTrigger value="unplayed">Unplayed</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="all" className="space-y-4 mt-4">
+                    {isLoading ? (
+                      <div className="flex justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                      </div>
+                    ) : episodes.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground">No episodes found</p>
+                      </div>
+                    ) : (
+                      episodes.map((episode) => (
+                        <Card key={episode.id} className="overflow-hidden">
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex justify-between">
+                              <div className="space-y-1">
+                                <h3 className="font-medium">{episode.title}</h3>
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                  <Calendar className="h-3 w-3 mr-1" />
+                                  <span>
+                                    {episode.published_date 
+                                      ? new Date(episode.published_date).toLocaleDateString() 
+                                      : 'Unknown date'}
+                                  </span>
+                                  <Clock className="h-3 w-3 ml-3 mr-1" />
+                                  <span>{episode.duration_formatted || '0:00'}</span>
+                                </div>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  toast({
+                                    title: "Playing",
+                                    description: `Now playing ${episode.title}`,
+                                  })
+                                }}
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0">
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {episode.description || 'No description available'}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="unplayed" className="space-y-4 mt-4">
+                    {isLoading ? (
+                      <div className="flex justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                      </div>
+                    ) : episodes.filter(e => !e.is_played).length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground">No unplayed episodes</p>
+                      </div>
+                    ) : (
+                      episodes
+                        .filter(episode => !episode.is_played)
+                        .map((episode) => (
+                          <Card key={episode.id} className="overflow-hidden">
+                            <CardHeader className="p-4 pb-2">
+                              <div className="flex justify-between">
+                                <div className="space-y-1">
+                                  <h3 className="font-medium">{episode.title}</h3>
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    <span>
+                                      {episode.published_date 
+                                        ? new Date(episode.published_date).toLocaleDateString() 
+                                        : 'Unknown date'}
+                                    </span>
+                                    <Clock className="h-3 w-3 ml-3 mr-1" />
+                                    <span>{episode.duration_formatted || '0:00'}</span>
+                                  </div>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    toast({
+                                      title: "Playing",
+                                      description: `Now playing ${episode.title}`,
+                                    })
+                                  }}
+                                >
+                                  <Play className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {episode.description || 'No description available'}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Headphones className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium">Select a podcast</h3>
+                  <p className="text-muted-foreground mt-2">
+                    Choose a podcast from your library to view episodes
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
