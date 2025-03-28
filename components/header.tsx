@@ -15,16 +15,20 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
-          <Image 
-            src="/images/a-ok-player-logo.png" 
-            alt="A-OK Player Logo" 
-            width={24} 
-            height={24} 
-            className="h-6 w-6"
-          />
-          <span className="font-bold">A-OK Player</span>
-        </Link>
+        {isMobile && (
+          <Link href="/" className="flex items-center space-x-2">
+            <Image 
+              src="/images/a-ok-player-logo.png" 
+              alt="A-OK Player Logo" 
+              width={24} 
+              height={24} 
+              className="h-6 w-6"
+            />
+            <span className="font-bold">A-OK Player</span>
+          </Link>
+        )}
+        
+        {!isMobile && <div className="w-6"></div>}
 
         <div className="flex items-center">
           {user ? (

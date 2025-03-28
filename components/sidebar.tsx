@@ -22,11 +22,11 @@ export default function Sidebar() {
           <Image 
             src="/images/a-ok-player-logo.png" 
             alt="A-OK Player Logo" 
-            width={32} 
-            height={32} 
-            className="h-8 w-8"
+            width={48} 
+            height={48} 
+            className="h-12 w-12"
           />
-          <span className="text-xl font-semibold text-foreground">A-OK Player</span>
+          <span className="text-lg font-semibold text-foreground">A-OK Player</span>
         </Link>
         
         <nav className="space-y-1">
