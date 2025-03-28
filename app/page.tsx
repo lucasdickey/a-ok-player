@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getUserRSSFeeds, SavedRSSFeed, getRecentEpisodes, RSSFeedEpisode, refreshUserFeeds } from "@/lib/rss-service"
-import { useMockAuth } from "@/components/auth/mock-auth-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { RecentlyPlayed } from "@/components/recently-played"
 import Link from "next/link"
 import { Calendar, Clock, Headphones, Play, PlusCircle, Radio, RefreshCw } from "lucide-react"
@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function StreamPage() {
-  const { user } = useMockAuth()
+  const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)

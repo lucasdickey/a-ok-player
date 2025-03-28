@@ -1,17 +1,16 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import LoginForm from '@/components/auth/login-form'
 import SignupForm from '@/components/auth/signup-form'
-import { useMockAuth } from '@/components/auth/mock-auth-provider'
+import { useAuth } from '@/components/auth/auth-provider'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
 
 export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState("login")
-  const { user, isLoading } = useMockAuth()
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
   const router = useRouter()
+  const { user, isLoading } = useAuth()
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -20,54 +19,34 @@ export default function AuthPage() {
   }, [user, isLoading, router])
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#009BA4]"></div>
-      </div>
-    )
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
 
   return (
-    <div className="container max-w-md py-12">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-[#004977] mb-2">Welcome to A-OK Player</h1>
-        <p className="text-muted-foreground">Your personal podcast companion</p>
-      </div>
+    <div className="container flex items-center justify-center min-h-screen py-12">
+      <div className="mx-auto w-full max-w-md space-y-6">
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold">Welcome to A-OK Player</h1>
+          <p className="text-gray-500">Sign in or create an account to continue</p>
+        </div>
 
-      <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full mb-8">
-          <TabsTrigger value="login">Login</TabsTrigger>
-          <TabsTrigger value="signup">Sign Up</TabsTrigger>
-        </TabsList>
-        <TabsContent value="login">
-          <LoginForm />
-          <div className="text-center mt-4">
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <button 
-                onClick={() => setActiveTab("signup")}
-                className="text-[#009BA4] hover:underline"
-              >
-                Sign up
-              </button>
-            </p>
-          </div>
-        </TabsContent>
-        <TabsContent value="signup">
-          <SignupForm />
-          <div className="text-center mt-4">
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <button 
-                onClick={() => setActiveTab("login")}
-                className="text-[#009BA4] hover:underline"
-              >
-                Log in
-              </button>
-            </p>
-          </div>
-        </TabsContent>
-      </Tabs>
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => setActiveTab(value as 'login' | 'signup')}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login">
+            <LoginForm />
+          </TabsContent>
+          <TabsContent value="signup">
+            <SignupForm />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { PlusCircle, Loader2, Check, AlertCircle, Info } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { useMockAuth } from "@/components/auth/mock-auth-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { fetchRSSFeed, saveRSSFeedUrl, updateRSSFeedMetadata, SavedRSSFeed } from "../../lib/rss-service"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -20,7 +20,7 @@ export default function AddRSSFeedPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const { toast } = useToast()
-  const { user } = useMockAuth()
+  const { user } = useAuth()
   const router = useRouter()
 
   const handleSaveFeedUrl = async () => {

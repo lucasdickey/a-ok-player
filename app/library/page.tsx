@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getUserRSSFeeds, SavedRSSFeed, getFeedEpisodes, RSSFeedEpisode, refreshUserFeeds } from "@/lib/rss-service"
-import { useMockAuth } from "@/components/auth/mock-auth-provider"
+import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { Calendar, Clock, Headphones, ListMusic, Play, PlusCircle, Radio, RefreshCw } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function LibraryPage() {
-  const { user } = useMockAuth()
+  const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(true)

@@ -6,11 +6,11 @@ import { Bell, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useMobile } from "@/hooks/use-mobile"
-import { useMockAuth } from "./auth/mock-auth-provider"
+import { useAuth } from "./auth/auth-provider"
 
 export default function Header() {
   const isMobile = useMobile()
-  const { user, signIn, signOut } = useMockAuth()
+  const { user, signIn, signOut } = useAuth()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -6,7 +6,7 @@ import PlayerProvider from "@/components/player/player-provider"
 import PlayerTray from "@/components/player/player-tray"
 import Sidebar from "@/components/sidebar"
 import Header from "@/components/header"
-import { MockAuthProvider } from "@/components/auth/mock-auth-provider"
+import { AuthProvider } from "@/components/auth/auth-provider"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -26,7 +26,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-background`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <MockAuthProvider>
+          <AuthProvider>
             <PlayerProvider>
               <div className="flex h-screen overflow-hidden">
                 <Sidebar />
@@ -38,7 +38,7 @@ export default function RootLayout({
               </div>
               <Toaster />
             </PlayerProvider>
-          </MockAuthProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
