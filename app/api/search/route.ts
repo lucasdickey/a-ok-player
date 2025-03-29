@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { parseFeed } from '@/lib/rss-parser'
+import { getUserFeeds, getFeedDetails } from '@/lib/feed-processor'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,37 +19,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Search query is required' }, { status: 400 })
     }
     
-    // Get all user's podcast subscriptions
-    const { data: subscriptions, error } = await supabase
-      .from('podcast_subscriptions')
-      .select('*')
-      .eq('user_id', session.user.id)
+    // Get all user's podcast feeds
+    const feeds = await getUserFeeds(session.user.id)
     
-    if (error) {
-      throw error
-    }
-    
-    if (!subscriptions || subscriptions.length === 0) {
+    if (!feeds || feeds.length === 0) {
       return NextResponse.json({ podcasts: [], episodes: [] })
     }
     
-    // Parse all feeds to get podcasts and episodes data
+    // Get all podcasts and episodes data
     const allPodcasts: any[] = []
     const allEpisodes: any[] = []
     
     await Promise.all(
-      subscriptions.map(async (subscription) => {
+      feeds.map(async (feed) => {
         try {
-          const { podcast, episodes } = await parseFeed(subscription.feed_url)
+          const { podcast, episodes } = await getFeedDetails(feed.id)
           
-          // Add the subscription id to the podcast for reference
-          podcast.subscriptionId = subscription.id
+          // Add the feed id to the podcast for reference
+          podcast.feedId = feed.id
           allPodcasts.push(podcast)
           
-          // Add all episodes to combined list
-          allEpisodes.push(...episodes)
+          // Add all episodes to combined list with podcast reference
+          const episodesWithPodcast = episodes.map(episode => ({
+            ...episode,
+            podcastTitle: podcast.title,
+            podcastImageUrl: podcast.imageUrl,
+            feedId: feed.id
+          }))
+          
+          allEpisodes.push(...episodesWithPodcast)
         } catch (error) {
-          console.error(`Error parsing feed ${subscription.feed_url}:`, error)
+          console.error(`Error getting feed details for ${feed.feed_url}:`, error)
           // Continue with other feeds even if one fails
         }
       })
@@ -60,16 +60,16 @@ export async function GET(request: NextRequest) {
     
     // Search podcasts
     const matchingPodcasts = allPodcasts.filter(podcast => 
-      podcast.title.toLowerCase().includes(normalizedQuery) || 
-      podcast.publisher.toLowerCase().includes(normalizedQuery) ||
-      podcast.description.toLowerCase().includes(normalizedQuery)
+      (podcast.title && podcast.title.toLowerCase().includes(normalizedQuery)) || 
+      (podcast.author && podcast.author.toLowerCase().includes(normalizedQuery)) ||
+      (podcast.description && podcast.description.toLowerCase().includes(normalizedQuery))
     )
     
     // Search episodes
     const matchingEpisodes = allEpisodes.filter(episode => 
-      episode.title.toLowerCase().includes(normalizedQuery) || 
-      episode.podcastTitle.toLowerCase().includes(normalizedQuery) ||
-      episode.description.toLowerCase().includes(normalizedQuery)
+      (episode.title && episode.title.toLowerCase().includes(normalizedQuery)) || 
+      (episode.podcastTitle && episode.podcastTitle.toLowerCase().includes(normalizedQuery)) ||
+      (episode.description && episode.description.toLowerCase().includes(normalizedQuery))
     )
     
     return NextResponse.json({ 

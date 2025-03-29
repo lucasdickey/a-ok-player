@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { parseFeed } from '@/lib/rss-parser'
+import { validateFeed, addFeed, getUserFeeds, removeFeed } from '@/lib/feed-processor'
 
 // GET handler to fetch all subscriptions for the current user
 export async function GET(request: NextRequest) {
@@ -13,16 +13,9 @@ export async function GET(request: NextRequest) {
     }
     
     // Get the user's subscribed podcasts
-    const { data: subscriptions, error } = await supabase
-      .from('podcast_subscriptions')
-      .select('*')
-      .eq('user_id', session.user.id)
+    const feeds = await getUserFeeds(session.user.id)
     
-    if (error) {
-      throw error
-    }
-    
-    return NextResponse.json({ subscriptions })
+    return NextResponse.json({ feeds })
   } catch (error) {
     console.error('Error fetching subscriptions:', error)
     return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 })
@@ -47,36 +40,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Feed URL is required' }, { status: 400 })
     }
     
-    // Check if the subscription already exists
-    const { data: existingSubscription } = await supabase
-      .from('podcast_subscriptions')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .eq('feed_url', feedUrl)
-      .maybeSingle()
+    // Validate the feed first
+    const validationResult = await validateFeed(feedUrl)
     
-    if (existingSubscription) {
-      return NextResponse.json({ error: 'You are already subscribed to this podcast' }, { status: 400 })
+    if (!validationResult.isValid) {
+      return NextResponse.json({ 
+        error: validationResult.message || 'Invalid podcast feed' 
+      }, { status: 400 })
     }
     
-    // Parse the feed to get podcast info
-    const { podcast } = await parseFeed(feedUrl)
+    // Add the feed to the user's subscriptions
+    const result = await addFeed(session.user.id, feedUrl)
     
-    // Add the subscription to the database
-    const { data, error } = await supabase
-      .from('podcast_subscriptions')
-      .insert({
-        user_id: session.user.id,
-        feed_url: feedUrl,
-        title: podcast.title
-      })
-      .select()
-    
-    if (error) {
-      throw error
+    if (!result.success) {
+      return NextResponse.json({ error: result.message }, { status: 400 })
     }
     
-    return NextResponse.json({ subscription: data[0], podcast })
+    return NextResponse.json({ 
+      success: true,
+      feedId: result.feedId,
+      message: result.message,
+      metadata: validationResult.metadata
+    })
   } catch (error) {
     console.error('Error adding subscription:', error)
     return NextResponse.json({ error: 'Failed to add subscription' }, { status: 500 })
@@ -93,26 +78,22 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    // Get subscription ID from request body
+    // Get feed ID from request body
     const body = await request.json()
-    const { id } = body
+    const { feedId } = body
     
-    if (!id) {
-      return NextResponse.json({ error: 'Subscription ID is required' }, { status: 400 })
+    if (!feedId) {
+      return NextResponse.json({ error: 'Feed ID is required' }, { status: 400 })
     }
     
-    // Delete the subscription
-    const { error } = await supabase
-      .from('podcast_subscriptions')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', session.user.id)
+    // Remove the feed
+    const result = await removeFeed(session.user.id, feedId)
     
-    if (error) {
-      throw error
+    if (!result.success) {
+      return NextResponse.json({ error: result.message }, { status: 400 })
     }
     
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, message: result.message })
   } catch (error) {
     console.error('Error deleting subscription:', error)
     return NextResponse.json({ error: 'Failed to delete subscription' }, { status: 500 })

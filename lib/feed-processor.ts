@@ -463,9 +463,9 @@ export async function removeFeed(userId: string, feedId: string): Promise<FeedPr
  * Refreshes a podcast feed by fetching the latest episodes
  * @param userId The user's ID
  * @param feedId The ID of the feed to refresh
- * @returns Processing result with episode counts
+ * @returns Processing result with episode counts and podcast data
  */
-export async function refreshFeed(userId: string, feedId: string): Promise<FeedProcessingResult> {
+export async function refreshFeed(userId: string, feedId: string): Promise<FeedProcessingResult & { podcast?: any }> {
   try {
     // First verify that the feed belongs to the user
     const { data: feed } = await supabase
@@ -482,49 +482,53 @@ export async function refreshFeed(userId: string, feedId: string): Promise<FeedP
       };
     }
     
-    // Fetch and validate the feed
-    const validationResult = await validateFeed(feed.feed_url);
+    // Fix common URL issues
+    const fixedUrl = fixFeedUrl(feed.feed_url);
     
-    if (!validationResult.isValid) {
-      return {
-        success: false,
-        message: `Failed to refresh feed: ${validationResult.message}`
-      };
+    // Parse the feed
+    const { podcast, episodes } = await parseFeed(fixedUrl);
+    
+    // Update feed metadata
+    const { error: updateError } = await supabase
+      .from('podcast_feeds')
+      .update({
+        title: podcast.title,
+        description: sanitizeHtml(podcast.description),
+        author: podcast.publisher,
+        image_url: podcast.artwork,
+        website_url: podcast.website,
+        last_checked_at: new Date().toISOString()
+      })
+      .eq('id', feedId);
+    
+    if (updateError) {
+      throw new Error(`Failed to update feed metadata: ${updateError.message}`);
     }
     
-    // Update feed metadata if available
-    if (validationResult.metadata) {
-      await supabase
-        .from('podcast_feeds')
-        .update({
-          title: validationResult.metadata.title || feed.title,
-          description: validationResult.metadata.description || feed.description,
-          author: validationResult.metadata.author || feed.author,
-          image_url: validationResult.metadata.imageUrl || feed.image_url,
-          website_url: validationResult.metadata.websiteUrl || feed.website_url,
-          language: validationResult.metadata.language || feed.language,
-          explicit: validationResult.metadata.explicit !== undefined ? validationResult.metadata.explicit : feed.explicit,
-          categories: validationResult.metadata.categories || feed.categories,
-          last_checked_at: new Date().toISOString()
-        })
-        .eq('id', feedId);
-    }
-    
-    // Fetch and store new episodes
-    const processingResult = await fetchAndStoreEpisodes(feedId, feed.feed_url);
+    // Process episodes
+    const result = await fetchAndStoreEpisodes(feedId, fixedUrl);
     
     return {
-      success: processingResult.success,
-      message: `Feed refreshed: ${processingResult.message}`,
+      success: true,
+      message: `Feed refreshed successfully with ${result.newEpisodeCount} new episodes`,
       feedId,
-      episodeCount: processingResult.episodeCount,
-      newEpisodeCount: processingResult.newEpisodeCount
+      episodeCount: result.episodeCount,
+      newEpisodeCount: result.newEpisodeCount,
+      podcast: {
+        title: podcast.title,
+        description: sanitizeHtml(podcast.description),
+        author: podcast.publisher,
+        imageUrl: podcast.artwork,
+        websiteUrl: podcast.website
+      }
     };
   } catch (error) {
     console.error('Error in refreshFeed:', error);
     return {
       success: false,
-      message: 'An unexpected error occurred while refreshing the feed',
+      message: error instanceof Error 
+        ? `Failed to refresh feed: ${error.message}` 
+        : 'Failed to refresh feed',
       error
     };
   }
@@ -588,5 +592,63 @@ export async function refreshAllFeeds(userId: string): Promise<{
       newEpisodes: 0,
       errors: [error instanceof Error ? error.message : 'Unknown error']
     };
+  }
+}
+
+/**
+ * Gets the details of a podcast feed
+ * @param feedId The ID of the feed
+ * @returns Podcast details and episodes
+ */
+export async function getFeedDetails(feedId: string): Promise<{ podcast: any, episodes: any[] }> {
+  try {
+    // Get the feed from the database
+    const { data: feed, error: feedError } = await supabase
+      .from('podcast_feeds')
+      .select('*')
+      .eq('id', feedId)
+      .single();
+    
+    if (feedError) {
+      throw new Error(`Failed to fetch feed details: ${feedError.message}`);
+    }
+    
+    if (!feed) {
+      throw new Error('Feed not found');
+    }
+    
+    // Get episodes for this feed
+    const { data: episodes, error: episodesError } = await supabase
+      .from('episodes')
+      .select('*')
+      .eq('feed_id', feedId)
+      .order('published_at', { ascending: false })
+      .limit(10);
+    
+    if (episodesError) {
+      throw new Error(`Failed to fetch episodes: ${episodesError.message}`);
+    }
+    
+    // Format the podcast data
+    const podcast = {
+      id: feed.id,
+      title: feed.title || 'Unknown Podcast',
+      description: feed.description || '',
+      author: feed.author || 'Unknown Author',
+      imageUrl: feed.image_url || '',
+      websiteUrl: feed.website_url || '',
+      language: feed.language || 'en',
+      explicit: feed.explicit || false,
+      categories: feed.categories || [],
+      lastCheckedAt: feed.last_checked_at
+    };
+    
+    return {
+      podcast,
+      episodes: episodes || []
+    };
+  } catch (error) {
+    console.error('Error in getFeedDetails:', error);
+    throw error;
   }
 }

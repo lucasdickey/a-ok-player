@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { parseFeed } from '@/lib/rss-parser'
+import { getFeedDetails, refreshFeed } from '@/lib/feed-processor'
 
 export async function GET(
   request: NextRequest,
@@ -14,9 +14,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    // Get the subscription by ID
-    const { data: subscription, error } = await supabase
-      .from('podcast_subscriptions')
+    // Get the feed by ID
+    const { data: feed, error } = await supabase
+      .from('podcast_feeds')
       .select('*')
       .eq('id', params.id)
       .eq('user_id', session.user.id)
@@ -26,8 +26,8 @@ export async function GET(
       return NextResponse.json({ error: 'Podcast not found' }, { status: 404 })
     }
     
-    // Parse the feed to get the latest episodes
-    const { podcast, episodes } = await parseFeed(subscription.feed_url)
+    // Get the feed details and episodes
+    const { podcast, episodes } = await getFeedDetails(feed.id)
     
     // Get saved episodes and playback states for this podcast's episodes
     const episodeIds = episodes.map(episode => episode.id)
@@ -73,5 +73,41 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching podcast:', error)
     return NextResponse.json({ error: 'Failed to fetch podcast' }, { status: 500 })
+  }
+}
+
+// PUT handler to refresh a podcast feed
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Get user session from cookie
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    // Refresh the feed
+    const result = await refreshFeed(session.user.id, params.id)
+    
+    if (!result.success) {
+      return NextResponse.json({ error: result.message }, { status: 400 })
+    }
+    
+    // Get the updated feed details
+    const { podcast, episodes } = await getFeedDetails(params.id)
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: result.message,
+      podcast,
+      episodeCount: episodes.length,
+      newEpisodeCount: result.newEpisodeCount
+    })
+  } catch (error) {
+    console.error('Error refreshing podcast:', error)
+    return NextResponse.json({ error: 'Failed to refresh podcast' }, { status: 500 })
   }
 }

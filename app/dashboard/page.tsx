@@ -42,7 +42,7 @@ export default function DashboardPage() {
                 ...result.podcast,
                 feedId: feed.id,
                 feedUrl: feed.feed_url,
-                lastUpdated: feed.last_updated,
+                lastUpdated: feed.last_checked_at,
                 error: false
               };
             } catch (error) {
@@ -106,7 +106,11 @@ export default function DashboardPage() {
     try {
       setRefreshingId(feedId);
       
-      const result = await refreshFeed(feedId, feedUrl);
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      
+      const result = await refreshFeed(user.id, feedId);
       
       if (result.success) {
         // Update the podcast in the list
@@ -166,7 +170,7 @@ export default function DashboardPage() {
                 ...result.podcast,
                 feedId: feed.id,
                 feedUrl: feed.feed_url,
-                lastUpdated: feed.last_updated,
+                lastUpdated: feed.last_checked_at,
                 error: false
               };
             } catch (error) {
