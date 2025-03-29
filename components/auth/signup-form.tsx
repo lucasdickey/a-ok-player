@@ -19,10 +19,17 @@ export default function SignupForm() {
     e.preventDefault()
     setIsLoading(true)
 
+    // Show loading toast
+    toast({
+      title: "Creating account",
+      description: "Please wait...",
+    })
+
     try {
       const { error, data } = await signUp(email, password)
       
       if (error) {
+        console.error("Signup error:", error)
         toast({
           title: "Signup failed",
           description: error.message,
@@ -32,20 +39,40 @@ export default function SignupForm() {
       }
 
       if (data.user && !data.session) {
+        // Clear the form first
+        setEmail('')
+        setPassword('')
+        
+        // Show a more prominent toast notification
         toast({
-          title: "Success!",
-          description: "Please check your email for the confirmation link."
+          title: "Verification Required",
+          description: "We've sent a confirmation link to your email. Please check your inbox and verify your account before logging in.",
+          duration: 10000, // Longer duration
+          variant: "default", // Use default variant for better visibility
         })
+        
+        // Add a console log to verify the toast is being triggered
+        console.log("Verification toast triggered", data.user)
+        
+        // Add a slight delay before showing the toast to ensure it's visible
+        setTimeout(() => {
+          toast({
+            title: "Important: Email Verification",
+            description: "Please check your email and verify your account before attempting to log in.",
+            duration: 8000,
+          })
+        }, 500)
       } else {
         toast({
           title: "Success!",
-          description: "Your account has been created."
+          description: "Your account has been created. You can now log in."
         })
       }
     } catch (error) {
+      console.error("Unexpected signup error:", error)
       toast({
         title: "An error occurred",
-        description: "Please try again later.",
+        description: error instanceof Error ? error.message : "Please try again later.",
         variant: "destructive"
       })
     } finally {
@@ -93,8 +120,16 @@ export default function SignupForm() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full bg-[#009BA4] hover:bg-[#007A82]" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Sign Up"}
+          <Button type="submit" className="w-full bg-[#c32b1a] hover:bg-[#a82315]" disabled={isLoading}>
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating account...
+              </div>
+            ) : "Sign Up"}
           </Button>
         </CardFooter>
       </form>

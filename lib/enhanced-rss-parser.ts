@@ -1,7 +1,25 @@
 import Parser from 'rss-parser';
 import { v4 as uuidv4 } from 'uuid';
-import { DOMParser } from 'linkedom';
 import { Database } from './supabase-types';
+
+// Use a conditional import for linkedom to handle browser environment
+let DOMParser: typeof window.DOMParser | any;
+try {
+  // Only import in server context
+  if (typeof window === 'undefined') {
+    const linkedom = require('linkedom');
+    DOMParser = linkedom.DOMParser;
+  } else {
+    // Use browser's native DOMParser in client context
+    DOMParser = window.DOMParser;
+  }
+} catch (error) {
+  console.warn('Error importing linkedom:', error);
+  // Fallback to browser's native DOMParser if available
+  if (typeof window !== 'undefined' && window.DOMParser) {
+    DOMParser = window.DOMParser;
+  }
+}
 
 // Types for podcast and episode data
 export interface Podcast {
