@@ -6,6 +6,9 @@ import { Database } from './supabase-types';
 // Type definitions
 export type PodcastFeed = Database['public']['Tables']['podcast_subscriptions']['Row'];
 export type Episode = Database['public']['Tables']['episodes']['Row'];
+export type PodcastEpisode = Episode & {
+  podcast_subscriptions?: PodcastFeed;
+};
 
 // Feed validation result interface
 export interface FeedValidationResult {
