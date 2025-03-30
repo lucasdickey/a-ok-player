@@ -25,7 +25,7 @@ export default function DashboardPage() {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from('podcast_feeds')
+          .from('podcast_subscriptions')
           .select('*')
           .eq('user_id', user.id);
           
@@ -78,7 +78,7 @@ export default function DashboardPage() {
   const handleDeleteSubscription = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('podcast_feeds')
+        .from('podcast_subscriptions')
         .delete()
         .eq('id', id);
         
@@ -155,7 +155,7 @@ export default function DashboardPage() {
       setLoading(true);
       const fetchSubscriptions = async () => {
         const { data } = await supabase
-          .from('podcast_feeds')
+          .from('podcast_subscriptions')
           .select('*')
           .eq('user_id', user.id);
           

@@ -291,4 +291,44 @@ Update the PROMPTS.md file to document the recent changes we've made to the appl
 4. Documented the recent deployment to Vercel
 5. Documented the local development setup
 
+## 17. Supabase Table Name Updates and Database Schema Corrections
+
+```
+I've noticed that our Supabase database has tables with different names than what our code expects. 
+Specifically, we have a table called 'podcast_subscriptions' but our code is trying to access 'podcast_feeds'.
+
+Let's update all references in our code from 'podcast_feeds' to 'podcast_subscriptions' to match the actual database structure.
+
+Also, we need to verify and update any other table structure mismatches:
+1. In the 'playback_states' table, the field is called 'last_position' not 'position'
+2. The 'playback_states' table includes a 'playback_rate' field
+3. In the 'queue_items' table, the timestamp field is 'added_at' not 'created_at'
+
+Please update all code references to match these actual database table names and field names.
+```
+
+### Implementation Details
+
+1. Updated table references across the application:
+   - Changed all references from `podcast_feeds` to `podcast_subscriptions` in:
+     - `supabase.ts`
+     - `feed-processor.ts`
+     - `api/podcast/[id]/route.ts`
+     - `dashboard/page.tsx`
+     - `app/page.tsx`
+     - Other components that referenced the table
+
+2. Updated field references to match the actual database schema:
+   - Changed `position` to `last_position` in the `playback_states` table
+   - Added support for the `playback_rate` field
+   - Updated timestamp references from `created_at` to `added_at` in the `queue_items` table
+
+3. Added a troubleshooting section to the README.md with guidance on:
+   - Checking environment variables
+   - Verifying table existence and structure
+   - Using the debug page to test connections
+   - Ensuring table and column names match the schema
+
+4. Created a more detailed database schema section in the documentation to prevent future mismatches
+
 *Note: This document will be updated throughout the development process to include all prompts used in creating the A-OK Player application.*

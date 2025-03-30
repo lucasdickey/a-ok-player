@@ -43,7 +43,7 @@ Reviewing `PROMPTS.md` is helpful for:
 
 - Node.js (v18 or higher)
 - npm or pnpm
-- Supabase account (optional for local development)
+- Supabase account (required for full functionality)
 
 ### Setup
 
@@ -61,23 +61,42 @@ pnpm install
 ```
 
 3. Set up environment variables
-   - For local development without Supabase, you can use the mock authentication:
-     ```bash
-     cp .env.local.example .env.local
-     ```
-   - For Supabase integration:
-     - Create a Supabase project
-     - Set up the database schema (instructions below)
-     - Copy your project URL and anon key to `.env.local`
+Create a `.env.local` file in the root directory with the following:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-4. Run the development server
+4. Set up the Supabase database
+   - Create a new project in Supabase
+   - Go to the SQL Editor in your Supabase dashboard
+   - Run the SQL script from `database/schema.sql` to create all tables
+   - Ensure Row Level Security (RLS) policies are set up correctly
+
+5. Start the development server
 ```bash
 npm run dev
 # or
 pnpm dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Database Schema
+
+This application uses Supabase (PostgreSQL) with the following tables:
+
+- `podcast_subscriptions` - Stores user podcast subscriptions (RSS feeds)
+- `episodes` - Stores podcast episode information
+- `queue_items` - Manages the user's playback queue
+- `saved_episodes` - Tracks episodes saved by users
+- `playback_states` - Stores playback position and rate for episodes
+
+### Table Structure Notes
+
+- `playback_states` uses `last_position` (not "position") to store the playback position
+- `playback_states` includes a `playback_rate` field for speed control
+- `queue_items` uses `added_at` (not "created_at") for timestamp tracking
 
 ## Application Architecture
 
@@ -132,24 +151,6 @@ The application uses a comprehensive RSS feed-based approach for podcast discove
    - Audio is streamed from the original source URL
    - Basic playback controls are implemented
 
-## Database Schema
-
-You can create the necessary tables in your Supabase database by running the SQL script located in `supabase/schema.sql`. Follow these steps:
-
-1. Go to your Supabase project dashboard
-2. Navigate to the "SQL Editor" in the left sidebar
-3. Create a new query
-4. Copy and paste the contents of `supabase/schema.sql` into the editor
-5. Run the query to create all tables and set up Row Level Security (RLS) policies
-
-This script will create the following tables:
-- `podcast_subscriptions` - Stores user podcast subscriptions (RSS feeds)
-- `queue_items` - Manages the playback queue
-- `saved_episodes` - Tracks bookmarked/saved episodes
-- `playback_states` - Stores playback position and rate for episodes
-
-Each table includes Row Level Security policies to ensure users can only access their own data.
-
 ## Deployment to Vercel
 
 1. Create a Vercel account if you don't have one
@@ -182,6 +183,15 @@ To test the RSS feed functionality:
 6. Click "View Episodes" to see episodes for a specific podcast
 7. Test the "Refresh" button to update your feeds with the latest episodes
 8. Try playing an episode by clicking the play button
+
+## Troubleshooting
+
+If you encounter issues with the Supabase connection:
+
+1. Check that your environment variables are set correctly
+2. Verify that all required tables exist in your Supabase database
+3. Visit the debug page at [http://localhost:3000/debug](http://localhost:3000/debug) to test your connection
+4. Ensure table names and column names match exactly as specified in the schema
 
 ## Known Issues and Future Improvements
 

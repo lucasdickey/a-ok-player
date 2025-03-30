@@ -15,14 +15,14 @@ export async function GET(
     }
     
     // Get the feed by ID
-    const { data: feed, error } = await supabase
-      .from('podcast_feeds')
+    const { data: feed, error: feedError } = await supabase
+      .from('podcast_subscriptions')
       .select('*')
       .eq('id', params.id)
       .eq('user_id', session.user.id)
       .single()
     
-    if (error) {
+    if (feedError) {
       return NextResponse.json({ error: 'Podcast not found' }, { status: 404 })
     }
     

@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Database } from './supabase-types';
 
 // Type definitions
-export type PodcastFeed = Database['public']['Tables']['podcast_feeds']['Row'];
+export type PodcastFeed = Database['public']['Tables']['podcast_subscriptions']['Row'];
 export type Episode = Database['public']['Tables']['episodes']['Row'];
 
 // Feed validation result interface
@@ -113,7 +113,7 @@ export async function addFeed(
     
     // First check if the feed already exists for this user
     const { data: existingFeed } = await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .select('id')
       .eq('user_id', userId)
       .eq('feed_url', fixedUrl)
@@ -145,7 +145,7 @@ export async function addFeed(
     // Insert the feed into the database
     const feedId = uuidv4();
     const { data, error } = await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .insert({
         id: feedId,
         user_id: userId,
@@ -275,7 +275,7 @@ export async function fetchAndStoreEpisodes(feedId: string, feedUrl: string): Pr
     
     // Update the last_checked_at timestamp for the feed
     await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .update({ 
         last_checked_at: new Date().toISOString(),
         episode_count: episodes.length
@@ -304,22 +304,38 @@ export async function fetchAndStoreEpisodes(feedId: string, feedUrl: string): Pr
  * @returns Array of podcast feeds
  */
 export async function getUserFeeds(userId: string) {
+  console.log('Fetching feeds for user:', userId);
+  
+  if (!userId) {
+    console.error('No userId provided to getUserFeeds');
+    return [];
+  }
+  
   try {
     const { data, error } = await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .select('*')
       .eq('user_id', userId)
       .order('title');
     
     if (error) {
       console.error('Error fetching user feeds:', error);
-      throw error;
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      return []; // Return empty array instead of throwing
     }
     
+    console.log(`Successfully fetched ${data?.length || 0} feeds for user`);
     return data || [];
   } catch (error) {
     console.error('Error in getUserFeeds:', error);
-    throw error;
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    } else {
+      console.error('Unknown error type:', typeof error);
+    }
+    return []; // Return empty array instead of throwing
   }
 }
 
@@ -359,36 +375,93 @@ export async function getFeedEpisodes(feedId: string, limit = 50, offset = 0) {
  * @returns Array of episodes with feed information
  */
 export async function getRecentEpisodes(userId: string, days = 7, limit = 50) {
+  console.log('Fetching recent episodes for user:', userId);
+  
+  if (!userId) {
+    console.error('No userId provided to getRecentEpisodes');
+    return [];
+  }
+  
   try {
     // Calculate the date to look back to
     const lookbackDate = new Date();
     lookbackDate.setDate(lookbackDate.getDate() - days);
     
-    const { data, error } = await supabase
+    console.log(`Looking back to ${lookbackDate.toISOString()}`);
+    
+    // First get the user's feeds
+    const { data: feeds, error: feedsError } = await supabase
+      .from('podcast_subscriptions')
+      .select('id')
+      .eq('user_id', userId);
+    
+    if (feedsError) {
+      console.error('Error fetching user feeds for episodes:', feedsError);
+      return [];
+    }
+    
+    if (!feeds || feeds.length === 0) {
+      console.log('User has no podcast feeds');
+      return [];
+    }
+    
+    // Get feed IDs
+    const feedIds = feeds.map(feed => feed.id);
+    console.log(`Found ${feedIds.length} feeds for user`);
+    
+    // Then get episodes for those feeds
+    const { data: episodes, error: episodesError } = await supabase
       .from('episodes')
-      .select(`
-        *,
-        podcast_feeds!inner(
-          id,
-          title,
-          image_url,
-          author
-        )
-      `)
+      .select('*')
+      .in('feed_id', feedIds)
       .gt('published_date', lookbackDate.toISOString())
-      .eq('podcast_feeds.user_id', userId)
       .order('published_date', { ascending: false })
       .limit(limit);
     
-    if (error) {
-      console.error('Error fetching recent episodes:', error);
-      throw error;
+    if (episodesError) {
+      console.error('Error fetching episodes:', episodesError);
+      return [];
     }
     
-    return data || [];
+    if (!episodes || episodes.length === 0) {
+      console.log('No recent episodes found');
+      return [];
+    }
+    
+    console.log(`Successfully fetched ${episodes.length} recent episodes`);
+    
+    // Now get the feed details for each episode
+    const episodesWithFeedDetails = await Promise.all(
+      episodes.map(async (episode) => {
+        const { data: feedData } = await supabase
+          .from('podcast_subscriptions')
+          .select('id, title, image_url, author')
+          .eq('id', episode.feed_id)
+          .single();
+        
+        return {
+          ...episode,
+          podcast_subscriptions: feedData || {
+            id: episode.feed_id,
+            title: 'Unknown Podcast',
+            image_url: null,
+            author: 'Unknown Author'
+          }
+        };
+      })
+    );
+    
+    return episodesWithFeedDetails;
   } catch (error) {
     console.error('Error in getRecentEpisodes:', error);
-    throw error;
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    } else {
+      console.error('Unknown error type:', typeof error);
+    }
+    return []; // Return empty array instead of throwing
   }
 }
 
@@ -402,7 +475,7 @@ export async function removeFeed(userId: string, feedId: string): Promise<FeedPr
   try {
     // First verify that the feed belongs to the user
     const { data: feed } = await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .select('id')
       .eq('id', feedId)
       .eq('user_id', userId)
@@ -432,7 +505,7 @@ export async function removeFeed(userId: string, feedId: string): Promise<FeedPr
     
     // Delete the feed
     const { error: feedError } = await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .delete()
       .eq('id', feedId);
     
@@ -469,7 +542,7 @@ export async function refreshFeed(userId: string, feedId: string): Promise<FeedP
   try {
     // First verify that the feed belongs to the user
     const { data: feed } = await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .select('*')
       .eq('id', feedId)
       .eq('user_id', userId)
@@ -490,7 +563,7 @@ export async function refreshFeed(userId: string, feedId: string): Promise<FeedP
     
     // Update feed metadata
     const { error: updateError } = await supabase
-      .from('podcast_feeds')
+      .from('podcast_subscriptions')
       .update({
         title: podcast.title,
         description: sanitizeHtml(podcast.description),
@@ -596,25 +669,35 @@ export async function refreshAllFeeds(userId: string): Promise<{
 }
 
 /**
- * Gets the details of a podcast feed
- * @param feedId The ID of the feed
+ * Gets detailed information about a podcast feed
+ * @param feedId The ID of the feed to get details for
  * @returns Podcast details and episodes
  */
-export async function getFeedDetails(feedId: string): Promise<{ podcast: any, episodes: any[] }> {
+export async function getFeedDetails(feedId: string) {
+  console.log('Getting feed details for:', feedId);
+  
+  if (!feedId) {
+    console.error('No feedId provided to getFeedDetails');
+    return { podcast: null, episodes: [] };
+  }
+  
   try {
-    // Get the feed from the database
-    const { data: feed, error: feedError } = await supabase
-      .from('podcast_feeds')
+    // Get the feed information
+    const { data: feed, error } = await supabase
+      .from('podcast_subscriptions')
       .select('*')
       .eq('id', feedId)
       .single();
     
-    if (feedError) {
-      throw new Error(`Failed to fetch feed details: ${feedError.message}`);
+    if (error) {
+      console.error('Error fetching feed details:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      return { podcast: null, episodes: [] };
     }
     
     if (!feed) {
-      throw new Error('Feed not found');
+      console.error('Feed not found with ID:', feedId);
+      return { podcast: null, episodes: [] };
     }
     
     // Get episodes for this feed
@@ -622,14 +705,16 @@ export async function getFeedDetails(feedId: string): Promise<{ podcast: any, ep
       .from('episodes')
       .select('*')
       .eq('feed_id', feedId)
-      .order('published_at', { ascending: false })
+      .order('published_date', { ascending: false })
       .limit(10);
     
     if (episodesError) {
-      throw new Error(`Failed to fetch episodes: ${episodesError.message}`);
+      console.error(`Failed to fetch episodes: ${episodesError.message}`);
+      console.error('Error details:', JSON.stringify(episodesError, null, 2));
+      return { podcast: feed, episodes: [] };
     }
     
-    // Format the podcast data
+    // Format the podcast data using only properties that exist in the schema
     const podcast = {
       id: feed.id,
       title: feed.title || 'Unknown Podcast',
@@ -637,18 +722,27 @@ export async function getFeedDetails(feedId: string): Promise<{ podcast: any, ep
       author: feed.author || 'Unknown Author',
       imageUrl: feed.image_url || '',
       websiteUrl: feed.website_url || '',
-      language: feed.language || 'en',
-      explicit: feed.explicit || false,
-      categories: feed.categories || [],
+      // Use default values for properties that don't exist in the schema
+      language: 'en',
+      explicit: false,
+      categories: [],
       lastCheckedAt: feed.last_checked_at
     };
     
+    console.log(`Successfully fetched feed details and ${episodes?.length || 0} episodes`);
     return {
       podcast,
       episodes: episodes || []
     };
   } catch (error) {
     console.error('Error in getFeedDetails:', error);
-    throw error;
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    } else {
+      console.error('Unknown error type:', typeof error);
+    }
+    return { podcast: null, episodes: [] };
   }
 }

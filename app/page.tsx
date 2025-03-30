@@ -26,7 +26,7 @@ interface Episode {
   audio_url: string;
   image_url: string | null;
   is_played: boolean;
-  podcast_feeds?: {
+  podcast_subscriptions?: {
     id: string;
     title: string | null;
     image_url: string | null;
@@ -178,7 +178,7 @@ export default function StreamPage() {
                   <CardContent className="p-4">
                     <h3 className="font-semibold truncate">{episode.title}</h3>
                     <p className="text-sm text-muted-foreground truncate">
-                      {episode.podcast_feeds?.title || 'Unknown Podcast'}
+                      {episode.podcast_subscriptions?.title || 'Unknown Podcast'}
                     </p>
                     <div className="flex items-center mt-2 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3 mr-1" />
