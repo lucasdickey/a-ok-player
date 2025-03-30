@@ -193,6 +193,20 @@ If you encounter issues with the Supabase connection:
 3. Visit the debug page at [http://localhost:3000/debug](http://localhost:3000/debug) to test your connection
 4. Ensure table names and column names match exactly as specified in the schema
 
+### Fixing Database Schema Issues
+
+If the debug page shows errors with missing tables or columns:
+
+1. Go to your Supabase dashboard and open the SQL Editor
+2. Run the schema fix script located in `database/schema-fix.sql`
+3. This script will:
+   - Create any missing tables (like the `episodes` table)
+   - Add missing columns to existing tables
+   - Rename columns that have incorrect names
+   - Set up proper Row Level Security (RLS) policies
+
+After running the script, return to the debug page and click "Test Schema Again" and "Test Structure Again" to verify that all issues have been resolved.
+
 ## Known Issues and Future Improvements
 
 - **CORS Handling**: Some podcast feeds may have CORS restrictions that prevent direct fetching. The application uses a proxy service to mitigate this, but some feeds may still fail to load.
