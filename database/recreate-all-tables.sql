@@ -22,7 +22,8 @@ CREATE TABLE public.podcast_subscriptions (
   explicit BOOLEAN DEFAULT false,
   categories TEXT[] DEFAULT '{}',
   last_checked_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+  episode_count INTEGER DEFAULT 0
 );
 
 -- Create episodes table
@@ -34,8 +35,15 @@ CREATE TABLE public.episodes (
   description TEXT,
   published_date TIMESTAMP WITH TIME ZONE,
   duration INTEGER,
+  duration_formatted TEXT,
   audio_url TEXT NOT NULL,
   image_url TEXT,
+  chapters_url TEXT,
+  transcript_url TEXT,
+  season INTEGER,
+  episode_number INTEGER,
+  type TEXT DEFAULT 'full',
+  explicit BOOLEAN DEFAULT false,
   is_played BOOLEAN DEFAULT false NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
   UNIQUE(feed_id, guid)
@@ -172,7 +180,16 @@ CREATE POLICY "Users can delete their own playback states"
 
 -- Add comments to tables to refresh schema cache
 COMMENT ON TABLE public.podcast_subscriptions IS 'Table for storing podcast subscriptions';
-COMMENT ON TABLE public.episodes IS 'Table for storing podcast episodes';
+COMMENT ON TABLE public.episodes IS 'Table for storing podcast episodes with chapters_url, transcript_url, and other metadata';
 COMMENT ON TABLE public.queue_items IS 'Table for storing user queue items';
 COMMENT ON TABLE public.saved_episodes IS 'Table for storing user saved episodes';
 COMMENT ON TABLE public.playback_states IS 'Table for storing user playback states';
+
+-- Add comments to columns to ensure they are in the schema cache
+COMMENT ON COLUMN public.episodes.chapters_url IS 'URL to podcast episode chapters file';
+COMMENT ON COLUMN public.episodes.transcript_url IS 'URL to podcast episode transcript';
+COMMENT ON COLUMN public.episodes.season IS 'Season number of the episode';
+COMMENT ON COLUMN public.episodes.episode_number IS 'Episode number within the season';
+COMMENT ON COLUMN public.episodes.type IS 'Type of episode (full, trailer, bonus)';
+COMMENT ON COLUMN public.episodes.duration_formatted IS 'Human-readable duration of the episode';
+COMMENT ON COLUMN public.episodes.explicit IS 'Whether the episode contains explicit content';

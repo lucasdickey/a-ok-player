@@ -54,7 +54,7 @@ export interface Episode {
   isBookmarked: boolean;
   progress: number;
   chaptersUrl?: string;
-  transcript?: string;
+  transcript_url?: string;
   season?: number;
   episode?: number;
   type?: 'full' | 'trailer' | 'bonus';
@@ -431,7 +431,7 @@ export async function parseFeed(feedUrl: string): Promise<{ podcast: Podcast, ep
         isBookmarked: false,
         progress: 0,
         chaptersUrl,
-        transcript: transcriptUrl,
+        transcript_url: transcriptUrl,
         season,
         episode: episodeNumber,
         type,

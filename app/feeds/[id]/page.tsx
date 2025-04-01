@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getFeedDetails } from '@/lib/feed-processor';
 import { PodcastFeed, PodcastEpisode } from '@/lib/feed-processor';
 import { RefreshCw, ArrowLeft } from 'lucide-react';
-import EpisodeList from '@/components/podcast/episode-list';
+import EpisodeList from '../../../components/podcast/episode-list';
 
 export default function FeedPage({ params }: { params: { id: string } }) {
   const [feed, setFeed] = useState<PodcastFeed | null>(null);
@@ -28,7 +28,8 @@ export default function FeedPage({ params }: { params: { id: string } }) {
     const fetchFeedDetails = async () => {
       try {
         setLoading(true);
-        const result = await getFeedDetails(params.id);
+        const feedId = typeof params.id === 'string' ? params.id : '';
+        const result = await getFeedDetails(feedId);
         
         if (result.podcast) {
           setFeed(result.podcast as PodcastFeed);
@@ -52,7 +53,8 @@ export default function FeedPage({ params }: { params: { id: string } }) {
     
     try {
       setRefreshing(true);
-      const result = await getFeedDetails(params.id);
+      const feedId = typeof params.id === 'string' ? params.id : '';
+      const result = await getFeedDetails(feedId);
       
       if (result.podcast) {
         setFeed(result.podcast as PodcastFeed);

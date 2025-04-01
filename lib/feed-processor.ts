@@ -228,7 +228,7 @@ export async function fetchAndStoreEpisodes(feedId: string, feedUrl: string): Pr
       audio_url: episode.audioUrl,
       image_url: episode.artwork,
       chapters_url: episode.chaptersUrl || null,
-      transcript_url: episode.transcript || null,
+      transcript_url: episode.transcript_url || null,
       season: episode.season || null,
       episode_number: episode.episode || null,
       type: episode.type || 'full',

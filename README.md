@@ -32,6 +32,7 @@ This project includes a `PROMPTS.md` file that documents the step-by-step develo
 - Deployment steps and configuration
 
 Reviewing `PROMPTS.md` is helpful for:
+
 - Understanding how the application was constructed
 - Learning about the development workflow
 - Getting context on design decisions
@@ -48,12 +49,14 @@ Reviewing `PROMPTS.md` is helpful for:
 ### Setup
 
 1. Clone the repository
+
 ```bash
 git clone https://github.com/yourusername/a-ok-player.git
 cd a-ok-player
 ```
 
 2. Install dependencies
+
 ```bash
 npm install
 # or
@@ -61,19 +64,22 @@ pnpm install
 ```
 
 3. Set up environment variables
-Create a `.env.local` file in the root directory with the following:
+   Create a `.env.local` file in the root directory with the following:
+
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 4. Set up the Supabase database
+
    - Create a new project in Supabase
    - Go to the SQL Editor in your Supabase dashboard
-   - Run the SQL script from `database/schema.sql` to create all tables
-   - Ensure Row Level Security (RLS) policies are set up correctly
+   - Run the SQL script from `database/recreate-all-tables.sql` to create all tables with proper schema
+   - Ensure Row Level Security (RLS) policies are set up correctly for all tables
 
 5. Start the development server
+
 ```bash
 npm run dev
 # or
@@ -92,11 +98,21 @@ This application uses Supabase (PostgreSQL) with the following tables:
 - `saved_episodes` - Tracks episodes saved by users
 - `playback_states` - Stores playback position and rate for episodes
 
-### Table Structure Notes
+### Critical Database Setup Notes
 
-- `playback_states` uses `last_position` (not "position") to store the playback position
-- `playback_states` includes a `playback_rate` field for speed control
-- `queue_items` uses `added_at` (not "created_at") for timestamp tracking
+The application requires specific columns in the database tables to function correctly:
+
+1. **podcast_subscriptions table**
+   - Must include: `id`, `user_id`, `title`, `description`, `author`, `image_url`, `feed_url`, `website_url`, `language`, `explicit`, `categories`, `last_checked_at`, `created_at`, `episode_count`
+
+2. **episodes table**
+   - Must include: `id`, `feed_id`, `guid`, `title`, `description`, `published_date`, `duration`, `duration_formatted`, `audio_url`, `image_url`, `chapters_url`, `transcript_url`, `season`, `episode_number`, `type`, `explicit`, `is_played`, `created_at`
+
+3. **Row Level Security (RLS)**
+   - All tables must have proper RLS policies for SELECT, INSERT, UPDATE, and DELETE operations
+   - The episodes table needs policies that allow users to manage episodes for podcasts they own
+
+The `recreate-all-tables.sql` script sets up all these tables and policies correctly. If you modify the database schema, ensure that all required columns and policies remain intact.
 
 ## Application Architecture
 
@@ -105,6 +121,7 @@ This application uses Supabase (PostgreSQL) with the following tables:
 The application supports two authentication modes:
 
 1. **Supabase Authentication (Production)**
+
    - Uses Supabase Auth for user management
    - Requires valid Supabase credentials in `.env.local`
    - Provides secure, persistent authentication across sessions
@@ -122,26 +139,31 @@ To switch between authentication modes, modify the `_app.tsx` file to use either
 The application uses a comprehensive RSS feed-based approach for podcast discovery and management:
 
 1. **Adding RSS Feeds**
+
    - Users can input podcast RSS feed URLs directly
    - The application fetches and parses the feed metadata using rss-parser
    - A CORS proxy (allorigins.win) is used to safely fetch feeds from any source
    - Feeds are saved to the user's library with complete metadata
 
 2. **Episode Indexing**
+
    - All episodes from subscribed feeds are automatically indexed
    - Episode metadata is extracted, including title, description, publication date, and audio URL
    - Episodes are stored with references to their parent feed
 
 3. **Storage Implementation**
+
    - **Development**: RSS feeds and episodes are stored in localStorage
    - **Production**: RSS feeds and episodes are stored in Supabase database
 
 4. **Library Management**
+
    - The library page displays all subscribed RSS feeds in both card and list views
    - Users can view episodes for each podcast
    - Feed metadata is displayed, including title, description, author, and cover image
 
 5. **Your Stream**
+
    - The home page displays recent episodes from all subscribed podcasts
    - Episodes can be filtered by time period (Today, This Week, All)
    - Users can refresh feeds to get the latest episodes
@@ -167,6 +189,7 @@ The application is currently deployed at: https://a-ok-player-krwpvvb3l-lucasdic
 ### Mock Authentication
 
 For testing the application without Supabase:
+
 1. Use the mock authentication system
 2. Default test credentials:
    - Email: `testuser@aokplayer.com`
@@ -175,6 +198,7 @@ For testing the application without Supabase:
 ### RSS Feed Testing
 
 To test the RSS feed functionality:
+
 1. Navigate to the "Add RSS Feed" page
 2. Enter a valid podcast RSS feed URL (e.g., https://feeds.simplecast.com/54nAGcIl)
 3. Preview the feed metadata
@@ -192,20 +216,6 @@ If you encounter issues with the Supabase connection:
 2. Verify that all required tables exist in your Supabase database
 3. Visit the debug page at [http://localhost:3000/debug](http://localhost:3000/debug) to test your connection
 4. Ensure table names and column names match exactly as specified in the schema
-
-### Fixing Database Schema Issues
-
-If the debug page shows errors with missing tables or columns:
-
-1. Go to your Supabase dashboard and open the SQL Editor
-2. Run the schema fix script located in `database/schema-fix.sql`
-3. This script will:
-   - Create any missing tables (like the `episodes` table)
-   - Add missing columns to existing tables
-   - Rename columns that have incorrect names
-   - Set up proper Row Level Security (RLS) policies
-
-After running the script, return to the debug page and click "Test Schema Again" and "Test Structure Again" to verify that all issues have been resolved.
 
 ## Known Issues and Future Improvements
 

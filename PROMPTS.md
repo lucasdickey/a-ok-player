@@ -331,4 +331,47 @@ Please update all code references to match these actual database table names and
 
 4. Created a more detailed database schema section in the documentation to prevent future mismatches
 
+## 18. Database Schema Fixes
+
+```
+I'm having issues with my Supabase database. When I try to add a podcast feed, I get a 404 error. I think there might be a mismatch between the table names in the code and the actual database schema. Can you help me fix this?
+
+Let's start by checking the database schema and making sure all the necessary tables exist with the correct column names.
+```
+
+### Implementation Details
+
+1. Identified and fixed database schema issues:
+   - Discovered the code was using `podcast_feeds` but the actual table was named `podcast_subscriptions`
+   - Updated all code references to use the correct table name
+   - Created SQL scripts to properly set up the database schema:
+     - `recreate-all-tables.sql` - Drops and recreates all tables with the correct schema
+     - `refresh-schema-cache.sql` - Refreshes the Supabase schema cache
+     - `add-episodes-insert-policy.sql` - Adds missing RLS policies
+
+2. Fixed missing columns in the `episodes` table:
+   - Added `chapters_url`, `transcript_url`, `season`, `episode_number`, `type`, `explicit`, and `duration_formatted` columns
+   - Added comments to all columns to ensure they are recognized in the schema cache
+
+3. Fixed Row Level Security (RLS) policy issues:
+   - Added INSERT, UPDATE, and DELETE policies for the episodes table
+   - Ensured all tables have proper RLS policies for all operations
+
+4. Fixed field name mismatches:
+   - Updated the Episode interface in `enhanced-rss-parser.ts` to use `transcript_url` instead of `transcript`
+   - Ensured consistent field naming between the code and database schema
+
+5. Updated documentation:
+   - Added detailed database setup instructions to README.md
+   - Documented critical columns required for each table
+   - Added troubleshooting tips for common database issues
+
+### Key Learnings
+
+1. Always ensure database table and column names match exactly between code and schema
+2. Set up proper RLS policies for all operations (SELECT, INSERT, UPDATE, DELETE)
+3. Use column comments to refresh the schema cache when making schema changes
+4. Check for field name consistency across interfaces and database operations
+5. When using Supabase, ensure all required columns are present before attempting to insert data
+
 *Note: This document will be updated throughout the development process to include all prompts used in creating the A-OK Player application.*
