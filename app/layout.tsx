@@ -1,7 +1,6 @@
 import type React from "react"
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
 import PlayerProvider from "@/components/player/player-provider"
 import PlayerTray from "@/components/player/player-tray"
 import Sidebar from "@/components/sidebar"
@@ -36,7 +35,6 @@ export default function RootLayout({
                   <PlayerTray />
                 </div>
               </div>
-              <Toaster />
             </PlayerProvider>
           </AuthProvider>
         </ThemeProvider>

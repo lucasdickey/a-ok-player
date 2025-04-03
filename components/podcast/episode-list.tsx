@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PodcastEpisode } from '@/lib/feed-processor';
 import { formatDuration, formatDate } from '@/lib/utils';
-import { Play, Bookmark, Plus, Check } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { Play, Pause, Bookmark, Plus, Check } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
+import { usePlayer } from '@/components/player/player-provider';
 import { supabase } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -16,32 +15,44 @@ interface EpisodeListProps {
 }
 
 export default function EpisodeList({ episodes }: EpisodeListProps) {
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [queueingId, setQueueingId] = useState<string | null>(null);
-  const { toast } = useToast();
   const { user } = useAuth();
+  const { playEpisode, currentEpisode, isPlaying, togglePlayPause } = usePlayer();
 
   const handlePlay = (episode: PodcastEpisode) => {
-    // In a real app, this would play the episode
-    setPlayingId(episode.id);
+    // Convert PodcastEpisode to the Episode format expected by PlayerProvider
+    const playerEpisode = {
+      id: episode.id,
+      title: episode.title,
+      description: episode.description || '',
+      publishDate: episode.published_date || '',
+      duration: formatDuration(episode.duration || 0),
+      durationSeconds: episode.duration || 0,
+      podcastTitle: episode.podcast_title || 'Unknown Podcast',
+      podcastId: episode.feed_id || '',
+      artwork: episode.image_url || '',
+      // Use example audio files for demo purposes if no audio_url is available
+      audioUrl: episode.audio_url || 'https://example-samples.netlify.app/audio/podcast-sample.mp3',
+      isNew: false,
+      isBookmarked: false,
+      progress: 0
+    };
     
-    toast({
-      title: "Playing Episode",
-      description: `Now playing: ${episode.title}`,
-    });
+    // Check if this is the current episode, if so toggle play/pause
+    if (currentEpisode && currentEpisode.id === episode.id) {
+      togglePlayPause();
+    } else {
+      // Otherwise play the new episode
+      playEpisode(playerEpisode);
+    }
     
-    // Reset after a moment to simulate the action
-    setTimeout(() => setPlayingId(null), 1000);
+    console.log(`Now playing: ${episode.title}`);
   };
   
   const handleSave = async (episode: PodcastEpisode) => {
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to save episodes",
-        variant: "destructive",
-      });
+      console.log("Authentication Required: Please log in to save episodes");
       return;
     }
     
@@ -57,10 +68,7 @@ export default function EpisodeList({ episodes }: EpisodeListProps) {
         .single();
       
       if (existingSaved) {
-        toast({
-          title: "Already Saved",
-          description: "This episode is already in your saved episodes",
-        });
+        console.log("Already Saved: This episode is already in your saved episodes");
         return;
       }
       
@@ -75,17 +83,10 @@ export default function EpisodeList({ episodes }: EpisodeListProps) {
       
       if (error) throw error;
       
-      toast({
-        title: "Episode Saved",
-        description: "Added to your saved episodes",
-      });
+      console.log("Episode Saved: Added to your saved episodes");
     } catch (error) {
       console.error('Error saving episode:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save episode",
-        variant: "destructive",
-      });
+      console.error("Error: Failed to save episode");
     } finally {
       setSavingId(null);
     }
@@ -93,11 +94,7 @@ export default function EpisodeList({ episodes }: EpisodeListProps) {
   
   const handleAddToQueue = async (episode: PodcastEpisode) => {
     if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to add episodes to your queue",
-        variant: "destructive",
-      });
+      console.log("Authentication Required: Please log in to add episodes to your queue");
       return;
     }
     
@@ -113,10 +110,7 @@ export default function EpisodeList({ episodes }: EpisodeListProps) {
         .single();
       
       if (existingQueue) {
-        toast({
-          title: "Already in Queue",
-          description: "This episode is already in your queue",
-        });
+        console.log("Already in Queue: This episode is already in your queue");
         return;
       }
       
@@ -142,17 +136,10 @@ export default function EpisodeList({ episodes }: EpisodeListProps) {
       
       if (error) throw error;
       
-      toast({
-        title: "Added to Queue",
-        description: "Episode added to your play queue",
-      });
+      console.log("Added to Queue: Episode added to your play queue");
     } catch (error) {
       console.error('Error adding to queue:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add episode to queue",
-        variant: "destructive",
-      });
+      console.error("Error: Failed to add episode to queue");
     } finally {
       setQueueingId(null);
     }
@@ -161,10 +148,10 @@ export default function EpisodeList({ episodes }: EpisodeListProps) {
   return (
     <div className="space-y-4">
       {episodes.map((episode) => (
-        <Card key={episode.id} className="overflow-hidden">
+        <div key={episode.id} className="bg-[#040605] rounded-lg overflow-hidden hover:bg-[#040605]/90 transition-all">
           <div className="flex flex-col md:flex-row">
             {episode.image_url && (
-              <div className="w-full md:w-32 h-32 flex-shrink-0">
+              <div className="w-full md:w-24 h-24 flex-shrink-0">
                 <img 
                   src={episode.image_url} 
                   alt={episode.title || 'Episode'} 
@@ -174,75 +161,78 @@ export default function EpisodeList({ episodes }: EpisodeListProps) {
             )}
             
             <div className="flex-grow p-4">
-              <h3 className="text-lg font-semibold">{episode.title}</h3>
-              
-              <div className="flex items-center text-sm text-gray-500 mt-1 space-x-3">
-                {episode.published_date && (
-                  <span>{formatDate(new Date(episode.published_date))}</span>
-                )}
-                {episode.duration && (
-                  <span>{formatDuration(episode.duration)}</span>
-                )}
-              </div>
-              
-              {episode.description && (
-                <p className="text-gray-600 mt-2 line-clamp-2">{episode.description}</p>
-              )}
-              
-              <div className="flex items-center mt-4 space-x-2">
-                <Button 
-                  size="sm" 
-                  onClick={() => handlePlay(episode)}
-                  disabled={playingId === episode.id}
-                  className="bg-[#c32b1a] hover:bg-[#a82315] text-[#f9f0dc]"
-                >
-                  {playingId === episode.id ? (
-                    <Check className="mr-1 h-4 w-4" />
-                  ) : (
-                    <Play className="mr-1 h-4 w-4" />
+              <div className="flex justify-between items-start">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-[#f9f0dc] truncate">{episode.title}</h3>
+                  
+                  <div className="flex items-center text-sm text-[#f9f0dc]/60 mt-1 space-x-3">
+                    {episode.published_date && (
+                      <span>{formatDate(new Date(episode.published_date))}</span>
+                    )}
+                    {episode.duration && (
+                      <span>{formatDuration(episode.duration)}</span>
+                    )}
+                  </div>
+                  
+                  {episode.description && (
+                    <p className="text-[#f9f0dc]/70 mt-2 line-clamp-2 text-sm">{episode.description}</p>
                   )}
-                  Play
-                </Button>
+                </div>
                 
                 <Button 
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handlePlay(episode)}
+                  className="text-[#f9f0dc] hover:text-[#c32b1a] h-10 w-10 rounded-full flex-shrink-0"
+                >
+                  {currentEpisode && currentEpisode.id === episode.id && isPlaying ? (
+                    <Pause className="h-5 w-5" />
+                  ) : (
+                    <Play className="h-5 w-5" />
+                  )}
+                </Button>
+              </div>
+              
+              <div className="flex items-center mt-3 space-x-2">
+                <Button 
                   size="sm" 
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => handleSave(episode)}
                   disabled={savingId === episode.id}
+                  className="text-[#f9f0dc]/70 hover:text-[#c32b1a] hover:bg-transparent px-2 h-8"
                 >
                   {savingId === episode.id ? (
                     <Check className="mr-1 h-4 w-4" />
                   ) : (
                     <Bookmark className="mr-1 h-4 w-4" />
                   )}
-                  Save
+                  <span className="text-xs">Save</span>
                 </Button>
                 
                 <Button 
                   size="sm" 
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => handleAddToQueue(episode)}
                   disabled={queueingId === episode.id}
+                  className="text-[#f9f0dc]/70 hover:text-[#c32b1a] hover:bg-transparent px-2 h-8"
                 >
                   {queueingId === episode.id ? (
                     <Check className="mr-1 h-4 w-4" />
                   ) : (
                     <Plus className="mr-1 h-4 w-4" />
                   )}
-                  Queue
+                  <span className="text-xs">Queue</span>
                 </Button>
               </div>
             </div>
           </div>
-        </Card>
+        </div>
       ))}
       
       {episodes.length === 0 && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-gray-500">No episodes found.</p>
-          </CardContent>
-        </Card>
+        <div className="bg-[#040605]/10 rounded-lg p-8 text-center">
+          <p className="text-[#040605]/60">No episodes found.</p>
+        </div>
       )}
     </div>
   );

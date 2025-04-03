@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from './auth-provider'
 
 export default function LoginForm() {
@@ -13,17 +12,13 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { signIn } = useAuth()
-  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Show loading toast
-    toast({
-      title: "Logging in",
-      description: "Please wait...",
-    })
+    // Log action
+    console.log("Logging in...")
 
     try {
       // Add console log to see what's happening
@@ -39,29 +34,17 @@ export default function LoginForm() {
         // Check for email not confirmed error
         if (error.message && error.message.includes("Email not confirmed")) {
           setIsLoading(false)
-          toast({
-            title: "Email Not Verified",
-            description: "Please check your email for a verification link and confirm your account before logging in.",
-            variant: "destructive",
-            duration: 8000,
-          })
+          console.log("Email Not Verified: Please check your email for a verification link")
           return
         }
         
         // Handle other errors
         setIsLoading(false)
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive"
-        })
+        console.error("Login failed:", error.message)
         return
       }
       
-      toast({
-        title: "Success!",
-        description: "You've been logged in successfully."
-      })
+      console.log("Login successful")
     } catch (error: any) {
       console.error("Unexpected login error:", error)
       
@@ -70,18 +53,9 @@ export default function LoginForm() {
       
       if (errorMessage.includes("Email not confirmed") || 
           (error?.error_description && error.error_description.includes("Email not confirmed"))) {
-        toast({
-          title: "Email Not Verified",
-          description: "Please check your email for a verification link and confirm your account before logging in.",
-          variant: "destructive",
-          duration: 8000,
-        })
+        console.log("Email Not Verified: Please check your email for a verification link")
       } else {
-        toast({
-          title: "An error occurred",
-          description: errorMessage,
-          variant: "destructive"
-        })
+        console.error("Login error:", errorMessage)
       }
     } finally {
       setIsLoading(false)
