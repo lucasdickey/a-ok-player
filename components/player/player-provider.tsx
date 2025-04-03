@@ -78,17 +78,30 @@ export default function PlayerProvider({ children }: { children: React.ReactNode
     if (!audioRef.current || !currentEpisode) return
 
     // Use the actual audio URL from the episode
-    audioRef.current.src = currentEpisode.audioUrl || ""
-    audioRef.current.playbackRate = playbackRate
-    audioRef.current.volume = volume
+    const audioUrl = currentEpisode.audioUrl || "";
+    
+    // Check if we have a valid audio URL
+    if (!audioUrl) {
+      console.error("Error: No audio URL available for this episode");
+      setIsPlaying(false);
+      return;
+    }
+    
+    // Only set src if it changed to avoid unnecessary reloads
+    if (audioRef.current.src !== audioUrl) {
+      audioRef.current.src = audioUrl;
+    }
+    
+    audioRef.current.playbackRate = playbackRate;
+    audioRef.current.volume = volume;
 
     if (isPlaying) {
       audioRef.current.play().catch((error) => {
-        console.error("Error playing audio:", error)
-        setIsPlaying(false)
-      })
+        console.error("Error playing audio:", error);
+        setIsPlaying(false);
+      });
     }
-  }, [currentEpisode])
+  }, [currentEpisode, playbackRate, volume, isPlaying])
 
   // Update audio when playback state changes
   useEffect(() => {

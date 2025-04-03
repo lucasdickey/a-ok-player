@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/components/auth/auth-provider'
-import { useToast } from '@/components/ui/use-toast'
 import { 
   getUserFeeds, 
   addFeed, 
@@ -19,7 +18,6 @@ export function useFeeds() {
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const { user } = useAuth()
-  const { toast } = useToast()
 
   // Fetch feeds when the component mounts or user changes
   const fetchFeeds = useCallback(async () => {
@@ -35,15 +33,10 @@ export function useFeeds() {
       setFeeds(userFeeds)
     } catch (error) {
       console.error('Error fetching feeds:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load your podcast feeds',
-        variant: 'destructive',
-      })
     } finally {
       setIsLoading(false)
     }
-  }, [user, toast])
+  }, [user])
 
   useEffect(() => {
     fetchFeeds()
@@ -52,11 +45,7 @@ export function useFeeds() {
   // Add a new feed
   const addNewFeed = async (feedUrl: string) => {
     if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to add feeds',
-        variant: 'destructive',
-      })
+      console.error('Error: You must be logged in to add feeds')
       return { success: false }
     }
 
@@ -64,27 +53,16 @@ export function useFeeds() {
       const result = await addFeed(user.id, feedUrl)
       
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: `Added "${result.message}"`,
-        })
+        console.log(`Success: Added "${result.message}"`)
         fetchFeeds() // Refresh the feeds list
         return { success: true, feedId: result.feedId }
       } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        })
+        console.error('Error:', result.message)
         return { success: false }
       }
     } catch (error) {
       console.error('Error adding feed:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to add podcast feed',
-        variant: 'destructive',
-      })
+      console.error('Error: Failed to add podcast feed')
       return { success: false }
     }
   }
@@ -97,28 +75,17 @@ export function useFeeds() {
       const result = await removeFeed(user.id, feedId)
       
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: 'Podcast removed from your library',
-        })
+        console.log('Success: Podcast removed from your library')
         // Update the local state
         setFeeds(feeds.filter(feed => feed.id !== feedId))
         return true
       } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        })
+        console.error('Error:', result.message)
         return false
       }
     } catch (error) {
       console.error('Error removing feed:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to remove podcast feed',
-        variant: 'destructive',
-      })
+      console.error('Failed to remove podcast feed')
       return false
     }
   }
@@ -132,27 +99,16 @@ export function useFeeds() {
       const result = await refreshFeed(user.id, feedId)
       
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: `Refreshed feed with ${result.newEpisodeCount} new episodes`,
-        })
+        console.log(`Success: Refreshed feed with ${result.newEpisodeCount} new episodes`)
         fetchFeeds() // Refresh the feeds list
         return true
       } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        })
+        console.error('Error:', result.message)
         return false
       }
     } catch (error) {
       console.error('Error refreshing feed:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh podcast feed',
-        variant: 'destructive',
-      })
+      console.error('Failed to refresh podcast feed')
       return false
     } finally {
       setIsRefreshing(false)
@@ -168,27 +124,16 @@ export function useFeeds() {
       const result = await refreshAllFeeds(user.id)
       
       if (result.success) {
-        toast({
-          title: 'Success',
-          description: `Refreshed ${result.updatedFeeds} feeds with ${result.newEpisodes} new episodes`,
-        })
+        console.log(`Success: Refreshed ${result.updatedFeeds} feeds with ${result.newEpisodes} new episodes`)
         fetchFeeds() // Refresh the feeds list
         return true
       } else {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        })
+        console.error('Error:', result.message)
         return false
       }
     } catch (error) {
       console.error('Error refreshing feeds:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh podcast feeds',
-        variant: 'destructive',
-      })
+      console.error('Failed to refresh podcast feeds')
       return false
     } finally {
       setIsRefreshing(false)
@@ -203,11 +148,7 @@ export function useFeeds() {
       return await getFeedEpisodes(feedId, limit, offset)
     } catch (error) {
       console.error('Error fetching episodes:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load episodes',
-        variant: 'destructive',
-      })
+      console.error('Failed to load episodes')
       return []
     }
   }
@@ -220,11 +161,7 @@ export function useFeeds() {
       return await getRecentEpisodes(user.id, days, limit)
     } catch (error) {
       console.error('Error fetching recent episodes:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to load recent episodes',
-        variant: 'destructive',
-      })
+      console.error('Failed to load recent episodes')
       return []
     }
   }

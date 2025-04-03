@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from './auth-provider'
 
 export default function SignupForm() {
@@ -13,28 +12,19 @@ export default function SignupForm() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { signUp } = useAuth()
-  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Show loading toast
-    toast({
-      title: "Creating account",
-      description: "Please wait...",
-    })
+    // Log action
+    console.log("Creating account...")
 
     try {
       const { error, data } = await signUp(email, password)
       
       if (error) {
         console.error("Signup error:", error)
-        toast({
-          title: "Signup failed",
-          description: error.message,
-          variant: "destructive"
-        })
         return
       }
 
@@ -43,38 +33,13 @@ export default function SignupForm() {
         setEmail('')
         setPassword('')
         
-        // Show a more prominent toast notification
-        toast({
-          title: "Verification Required",
-          description: "We've sent a confirmation link to your email. Please check your inbox and verify your account before logging in.",
-          duration: 10000, // Longer duration
-          variant: "default", // Use default variant for better visibility
-        })
-        
-        // Add a console log to verify the toast is being triggered
-        console.log("Verification toast triggered", data.user)
-        
-        // Add a slight delay before showing the toast to ensure it's visible
-        setTimeout(() => {
-          toast({
-            title: "Important: Email Verification",
-            description: "Please check your email and verify your account before attempting to log in.",
-            duration: 8000,
-          })
-        }, 500)
+        // Add a console log to notify about email verification
+        console.log("Verification Required: Please check your email", data.user)
       } else {
-        toast({
-          title: "Success!",
-          description: "Your account has been created. You can now log in."
-        })
+        console.log("Success! Your account has been created.")
       }
     } catch (error) {
-      console.error("Unexpected signup error:", error)
-      toast({
-        title: "An error occurred",
-        description: error instanceof Error ? error.message : "Please try again later.",
-        variant: "destructive"
-      })
+      console.error("Unexpected signup error:", error instanceof Error ? error.message : "Please try again later.")
     } finally {
       setIsLoading(false)
     }

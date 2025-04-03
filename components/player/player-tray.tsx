@@ -72,9 +72,26 @@ export default function PlayerTray() {
     }
   }, [])
 
-  // If no episode is playing, don't show the player
+  // If no episode is playing, show a skeleton player
   if (!currentEpisode) {
-    return null
+    return (
+      <div className="fixed bottom-0 left-0 right-0 bg-[#040605] text-[#f9f0dc] h-20 border-t border-[#c32b1a]/20">
+        <div className="flex items-center h-full px-4">
+          <div className="h-10 w-10 rounded bg-[#f9f0dc]/10 mr-3 flex-shrink-0"></div>
+          <div className="flex-1 min-w-0 mr-4">
+            <div className="h-4 w-48 bg-[#f9f0dc]/10 rounded mb-2"></div>
+            <div className="h-3 w-32 bg-[#f9f0dc]/10 rounded"></div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-[#f9f0dc]/10"></div>
+            <div className="h-10 w-10 rounded-full bg-[#c32b1a] flex items-center justify-center">
+              <Play className="h-5 w-5 text-[#f9f0dc]" />
+            </div>
+            <div className="h-8 w-8 rounded-full bg-[#f9f0dc]/10"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Get volume icon based on volume level
@@ -86,81 +103,115 @@ export default function PlayerTray() {
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 bg-[#009BA4] text-white transition-all duration-300 ${isExpanded ? "h-96" : "h-16 md:h-20"}`}
+      className={`fixed bottom-0 left-0 right-0 bg-[#040605] text-[#f9f0dc] transition-all duration-300 ${
+        isExpanded ? "h-96" : "h-20"
+      } border-t border-[#c32b1a]/20 overflow-hidden z-50 shadow-lg`}
     >
+      {/* Progress Bar Slider (always visible but positioned differently based on mode) */}
+      <div className={`${isExpanded ? "hidden" : "block"} absolute top-0 left-0 right-0 px-1 py-1 z-10`}>
+        <Slider
+          value={[currentTime]}
+          min={0}
+          max={duration || 100}
+          step={1}
+          onValueChange={(value) => seekTo(value[0])}
+          className="[&>span:first-child]:h-2 [&>span:first-child]:bg-[#f9f0dc]/20 [&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:opacity-80 [&_[role=slider]]:bg-[#c32b1a] [&_[role=slider]]:border-2 [&_[role=slider]]:border-[#f9f0dc] [&>span:first-child_span]:bg-[#c32b1a]"
+        />
+      </div>
+      
       {/* Collapsed Player */}
-      <div className={`flex items-center h-16 md:h-20 px-4 ${isExpanded ? "border-b border-white/20" : ""}`}>
+      <div className={`flex items-center h-20 px-4 ${isExpanded ? "border-b border-[#c32b1a]/20" : ""}`}>
         {/* Expand/Collapse Button */}
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-white hover:bg-white/10 mr-2"
+          onClick={() => {
+            console.log("Current expanded state:", isExpanded);
+            setIsExpanded(prev => !prev);
+            console.log("New expanded state:", !isExpanded);
+          }}
+          className="text-[#f9f0dc] hover:bg-[#f9f0dc]/10 mr-2 border border-[#f9f0dc]/30 rounded-full h-8 w-8"
         >
           {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
         </Button>
+        
+        <div className="flex items-center flex-1 min-w-0">
+          {/* Artwork */}
+          <div className="h-12 w-12 rounded-lg bg-[#f9f0dc]/10 mr-3 flex-shrink-0 overflow-hidden">
+            {currentEpisode.artwork && (
+              <img
+                src={currentEpisode.artwork || "/placeholder.svg"}
+                alt={currentEpisode.podcastTitle}
+                className="h-full w-full object-cover"
+              />
+            )}
+          </div>
 
-        {/* Artwork (always visible on mobile, visible on hover for desktop) */}
-        <div className={`h-12 w-12 rounded bg-[#9EDEDA] mr-3 flex-shrink-0 ${isMobile ? "block" : "hidden md:block"}`}>
-          {currentEpisode.artwork && (
-            <img
-              src={currentEpisode.artwork || "/placeholder.svg"}
-              alt={currentEpisode.podcastTitle}
-              className="h-full w-full object-cover rounded"
-            />
-          )}
-        </div>
-
-        {/* Episode Info */}
-        <div className="flex-1 min-w-0 mr-4">
-          <div className="font-medium truncate">{currentEpisode.title}</div>
-          <div className="text-sm text-white/80 truncate">{currentEpisode.podcastTitle}</div>
+          {/* Episode Info */}
+          <div className="flex-1 min-w-0 mr-4">
+            <div className="font-medium truncate text-[#f9f0dc]">{currentEpisode.title}</div>
+            <div className="text-sm text-[#f9f0dc]/80 truncate">{currentEpisode.podcastTitle}</div>
+          </div>
         </div>
 
         {/* Playback Controls */}
-        <div className="flex items-center gap-1 md:gap-2">
+        <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => skipBackward(30)}
-            className="text-white hover:bg-white/10 hidden md:flex"
+            onClick={() => skipBackward(15)}
+            className="text-[#f9f0dc] hover:bg-[#f9f0dc]/10 h-8 w-8 rounded-full hidden md:flex items-center justify-center"
           >
-            <SkipBack className="h-5 w-5" />
+            <div className="relative flex items-center justify-center w-full h-full">
+              <SkipBack className="h-4 w-4 absolute" />
+              <span className="text-[7px] font-bold">15</span>
+            </div>
           </Button>
 
-          <Button variant="ghost" size="icon" onClick={togglePlayPause} className="text-white hover:bg-white/10">
-            {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={togglePlayPause} 
+            className="text-[#f9f0dc] bg-[#c32b1a] hover:bg-[#a82315] h-10 w-10 rounded-full flex items-center justify-center p-0"
+          >
+            {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
           </Button>
 
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => skipForward(30)}
-            className="text-white hover:bg-white/10 hidden md:flex"
+            onClick={() => skipForward(15)}
+            className="text-[#f9f0dc] hover:bg-[#f9f0dc]/10 h-8 w-8 rounded-full hidden md:flex items-center justify-center"
           >
-            <SkipForward className="h-5 w-5" />
+            <div className="relative flex items-center justify-center w-full h-full">
+              <SkipForward className="h-4 w-4 absolute" />
+              <span className="text-[7px] font-bold">15</span>
+            </div>
           </Button>
-
+        </div>
+        
+        {/* Additional Controls */}
+        <div className="flex items-center gap-2 ml-4">
           {/* Volume Control (Desktop Only) */}
           <div className="hidden md:block relative" ref={volumeRef}>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowVolumeSlider(!showVolumeSlider)}
-              className="text-white hover:bg-white/10"
+              className="text-[#f9f0dc] hover:bg-[#f9f0dc]/10 h-8 w-8 rounded-full"
             >
               {getVolumeIcon()}
             </Button>
 
             {showVolumeSlider && (
-              <div className="absolute bottom-full mb-2 p-3 bg-[#007187] rounded-md w-32">
+              <div className="absolute bottom-full mb-2 p-3 bg-[#040605] border border-[#c32b1a]/20 rounded-md w-32">
                 <Slider
                   value={[volume * 100]}
                   min={0}
                   max={100}
                   step={1}
                   onValueChange={(value) => setVolume(value[0] / 100)}
-                  className="[&>span:first-child]:bg-white/30 [&_[role=slider]]:bg-white [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-white"
+                  className="[&>span:first-child]:bg-[#f9f0dc]/30 [&_[role=slider]]:bg-[#c32b1a] [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-[#c32b1a]"
                 />
               </div>
             )}
@@ -169,152 +220,117 @@ export default function PlayerTray() {
           {/* Queue Button */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hidden md:flex">
-                <ListMusic className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="text-[#f9f0dc] hover:bg-[#f9f0dc]/10 h-8 w-8 rounded-full">
+                <ListMusic className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-80 sm:w-96">
+            <SheetContent className="w-80 sm:w-96 bg-[#040605] text-[#f9f0dc] border-l border-[#c32b1a]/20">
               <QueueList />
             </SheetContent>
           </Sheet>
         </div>
       </div>
-
-      {/* Progress Bar (always visible) */}
-      <div className="absolute -top-2 left-0 right-0 px-4">
-        <Slider
-          value={[currentTime]}
-          min={0}
-          max={duration || 100}
-          step={1}
-          onValueChange={(value) => seekTo(value[0])}
-          className="[&>span:first-child]:h-1 [&>span:first-child]:bg-white/30 [&_[role=slider]]:bg-white [&_[role=slider]]:w-3 [&_[role=slider]]:h-3 [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-white [&_[role=slider]:focus-visible]:ring-0 [&_[role=slider]:focus-visible]:ring-offset-0"
-        />
-      </div>
-
-      {/* Time Display */}
-      <div className="absolute -top-6 left-0 right-0 px-4 flex justify-between text-xs text-white/80">
-        <div>{formatTime(currentTime)}</div>
-        <div>{formatTime(duration)}</div>
-      </div>
-
-      {/* Expanded Player */}
+      
+      {/* Time Display for collapsed view */}
+      {!isExpanded && (
+        <div className="absolute bottom-1 left-0 right-0 px-4 flex justify-between text-xs text-[#f9f0dc]/60 pointer-events-none">
+          <div>{formatTime(currentTime)}</div>
+          <div>-{formatTime(duration - currentTime)}</div>
+        </div>
+      )}
+      
+      {/* Expanded Player Content */}
       {isExpanded && (
-        <div className="h-[calc(100%-5rem)] p-4 overflow-y-auto">
-          <div className="flex flex-col md:flex-row gap-6 items-center">
+        <div className="p-4 overflow-y-auto h-[calc(100%-5rem)] block">
+          <div className="flex flex-col items-center">
             {/* Large Artwork */}
-            <div className="w-48 h-48 bg-[#9EDEDA] rounded-lg flex-shrink-0">
+            <div className="w-32 h-32 md:w-48 md:h-48 bg-[#f9f0dc]/10 rounded-lg mb-4 overflow-hidden">
               {currentEpisode.artwork && (
                 <img
-                  src={currentEpisode.artwork || "/placeholder.svg"}
-                  alt={currentEpisode.podcastTitle}
-                  className="h-full w-full object-cover rounded-lg"
+                  src={currentEpisode.artwork}
+                  alt={currentEpisode.title}
+                  className="w-full h-full object-cover"
                 />
               )}
             </div>
 
-            <div className="flex-1 space-y-6">
-              {/* Episode Info */}
-              <div className="text-center md:text-left">
-                <h3 className="text-xl font-bold">{currentEpisode.title}</h3>
-                <p className="text-white/80">{currentEpisode.podcastTitle}</p>
-              </div>
-
-              {/* Extended Controls */}
-              <div className="flex flex-wrap justify-center md:justify-start gap-4">
-                {/* Playback Speed */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">Speed:</span>
-                  <div className="flex">
-                    {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
-                      <Button
-                        key={rate}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPlaybackRate(rate)}
-                        className={`text-xs px-2 py-1 h-auto ${
-                          playbackRate === rate ? "bg-white text-[#009BA4]" : "text-white hover:bg-white/10"
-                        }`}
-                      >
-                        {rate}x
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mobile Volume Control */}
-                {isMobile && (
-                  <div className="w-full flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setVolume(0)}
-                      className="text-white hover:bg-white/10"
-                    >
-                      {getVolumeIcon()}
-                    </Button>
-                    <Slider
-                      value={[volume * 100]}
-                      min={0}
-                      max={100}
-                      step={1}
-                      onValueChange={(value) => setVolume(value[0] / 100)}
-                      className="flex-1 [&>span:first-child]:bg-white/30 [&_[role=slider]]:bg-white [&_[role=slider]]:border-0 [&>span:first-child_span]:bg-white"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Extended Playback Controls */}
-              <div className="flex justify-center md:justify-start items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => skipBackward(30)}
-                  className="text-white hover:bg-white/10"
-                >
-                  <div className="relative">
-                    <SkipBack className="h-6 w-6" />
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold mt-1">
-                      30
-                    </span>
-                  </div>
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={togglePlayPause}
-                  className="text-white hover:bg-white/10 h-14 w-14"
-                >
-                  {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => skipForward(30)}
-                  className="text-white hover:bg-white/10"
-                >
-                  <div className="relative">
-                    <SkipForward className="h-6 w-6" />
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold mt-1">
-                      30
-                    </span>
-                  </div>
-                </Button>
+            {/* Episode Title and Podcast */}
+            <h3 className="text-lg font-semibold text-center mb-1">{currentEpisode.title}</h3>
+            <p className="text-sm text-[#f9f0dc]/80 mb-4">{currentEpisode.podcastTitle}</p>
+            
+            {/* Detailed Progress Bar */}
+            <div className="w-full max-w-md mb-4">
+              <Slider
+                value={[currentTime]}
+                min={0}
+                max={duration || 100}
+                step={1}
+                onValueChange={(value) => seekTo(value[0])}
+                className="[&>span:first-child]:h-2 [&>span:first-child]:bg-[#f9f0dc]/20 [&_[role=slider]]:bg-[#c32b1a] [&_[role=slider]]:w-4 [&_[role=slider]]:h-4 [&_[role=slider]]:border-2 [&_[role=slider]]:border-[#f9f0dc] [&>span:first-child_span]:bg-[#c32b1a]"
+              />
+              <div className="flex justify-between text-xs text-[#f9f0dc]/70 mt-1">
+                <div>{formatTime(currentTime)}</div>
+                <div>{formatTime(duration)}</div>
               </div>
             </div>
-          </div>
 
-          {/* Queue in Expanded View */}
-          <div className="mt-6">
-            <h3 className="text-lg font-bold mb-3">Up Next</h3>
-            <QueueList compact />
+            {/* Extended Playback Controls */}
+            <div className="flex items-center gap-6 mb-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => skipBackward(15)}
+                className="text-[#f9f0dc] hover:bg-[#f9f0dc]/10 h-10 w-10 rounded-full flex items-center justify-center"
+              >
+                <div className="relative flex items-center justify-center w-full h-full">
+                  <SkipBack className="h-5 w-5 absolute" />
+                  <span className="text-[9px] font-bold">15</span>
+                </div>
+              </Button>
+
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={togglePlayPause} 
+                className="text-[#f9f0dc] bg-[#c32b1a] hover:bg-[#a82315] h-14 w-14 rounded-full flex items-center justify-center p-0"
+              >
+                {isPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7" />}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => skipForward(15)}
+                className="text-[#f9f0dc] hover:bg-[#f9f0dc]/10 h-10 w-10 rounded-full flex items-center justify-center"
+              >
+                <div className="relative flex items-center justify-center w-full h-full">
+                  <SkipForward className="h-5 w-5 absolute" />
+                  <span className="text-[9px] font-bold">15</span>
+                </div>
+              </Button>
+            </div>
+
+            {/* Playback Rate Control */}
+            <h4 className="text-sm font-medium mb-2">Playback Speed</h4>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                <Button
+                  key={rate}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPlaybackRate(rate)}
+                  className={`
+                    ${playbackRate === rate ? 'bg-[#c32b1a] text-[#f9f0dc] border-[#c32b1a]' : 'bg-transparent text-[#f9f0dc] border-[#f9f0dc]/20'}
+                    hover:bg-[#c32b1a] hover:text-[#f9f0dc] min-w-[46px]
+                  `}
+                >
+                  {rate}x
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       )}
     </div>
   )
 }
-

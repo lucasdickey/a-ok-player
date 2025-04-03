@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { supabase } from '@/lib/supabase';
 import { getFeedDetails, refreshFeed } from '@/lib/feed-processor';
 import { AlertCircle, Trash2, RefreshCw } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
 
 export default function DashboardPage() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -16,7 +15,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const { user } = useAuth();
-  const { toast } = useToast();
   
   useEffect(() => {
     if (!user) return;
@@ -62,18 +60,14 @@ export default function DashboardPage() {
         setPodcasts(podcastDetails);
       } catch (error) {
         console.error('Error fetching subscriptions:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load your subscriptions',
-          variant: 'destructive'
-        });
+        console.error('Failed to load your subscriptions');
       } finally {
         setLoading(false);
       }
     };
     
     fetchSubscriptions();
-  }, [user, toast]);
+  }, [user]);
   
   const handleDeleteSubscription = async (id: string) => {
     try {
@@ -88,17 +82,10 @@ export default function DashboardPage() {
       setSubscriptions(subscriptions.filter(sub => sub.id !== id));
       setPodcasts(podcasts.filter(podcast => podcast.feedId !== id));
       
-      toast({
-        title: 'Success',
-        description: 'Podcast removed from your library'
-      });
+      console.log('Success: Podcast removed from your library');
     } catch (error) {
       console.error('Error deleting subscription:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to remove podcast',
-        variant: 'destructive'
-      });
+      console.error('Error: Failed to remove podcast');
     }
   };
   
@@ -130,20 +117,13 @@ export default function DashboardPage() {
           )
         );
         
-        toast({
-          title: 'Success',
-          description: 'Podcast feed refreshed successfully'
-        });
+        console.log('Success: Podcast feed refreshed successfully');
       } else {
         throw new Error(result.message || 'Failed to refresh feed');
       }
     } catch (error) {
       console.error('Error refreshing feed:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh podcast feed',
-        variant: 'destructive'
-      });
+      console.error('Error: Failed to refresh podcast feed');
     } finally {
       setRefreshingId(null);
     }

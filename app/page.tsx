@@ -10,8 +10,8 @@ import { PodcastFeed } from "@/lib/feed-processor"
 import { useAuth } from "@/components/auth/auth-provider"
 import { RecentlyPlayed } from "@/components/recently-played"
 import Link from "next/link"
-import { Calendar, Clock, Headphones, Play, PlusCircle, Radio, RefreshCw } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { Calendar, Clock, Headphones, Play, Pause, PlusCircle, Radio, RefreshCw } from "lucide-react"
+import { usePlayer } from "@/components/player/player-provider"
 
 // Define types for episodes
 interface Episode {
@@ -37,7 +37,7 @@ interface Episode {
 export default function StreamPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const { toast } = useToast()
+  const { playEpisode, currentEpisode, isPlaying, togglePlayPause } = usePlayer()
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [feeds, setFeeds] = useState<PodcastFeed[]>([])
@@ -63,18 +63,13 @@ export default function StreamPage() {
         setRecentEpisodes(episodes)
       } catch (error) {
         console.error('Error loading content:', error)
-        toast({
-          title: 'Error',
-          description: 'Failed to load content',
-          variant: 'destructive',
-        })
       } finally {
         setIsLoading(false)
       }
     }
     
     loadContent()
-  }, [user, router, toast])
+  }, [user, router])
 
   // Handle refresh
   const handleRefresh = async () => {
@@ -92,17 +87,9 @@ export default function StreamPage() {
       const episodes = await getRecentEpisodes(user.id)
       setRecentEpisodes(episodes)
       
-      toast({
-        title: 'Success',
-        description: 'Content refreshed successfully',
-      })
+      console.log('Content refreshed successfully')
     } catch (error) {
       console.error('Error refreshing content:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh content',
-        variant: 'destructive',
-      })
     } finally {
       setIsRefreshing(false)
     }
@@ -166,13 +153,37 @@ export default function StreamPage() {
                       size="icon" 
                       className="absolute bottom-2 right-2 rounded-full"
                       onClick={() => {
-                        toast({
-                          title: "Playing",
-                          description: `Now playing ${episode.title}`,
-                        })
+                        // Create a player episode from the episode object
+                        const playerEpisode = {
+                          id: episode.id,
+                          title: episode.title,
+                          description: episode.description || '',
+                          publishDate: episode.published_date || '',
+                          duration: episode.duration_formatted || '0:00',
+                          durationSeconds: episode.duration || 0,
+                          podcastTitle: episode.podcast_subscriptions?.title || 'Unknown Podcast',
+                          podcastId: episode.feed_id,
+                          artwork: episode.image_url || '',
+                          audioUrl: episode.audio_url || 'https://example-samples.netlify.app/audio/podcast-sample.mp3',
+                          isNew: false,
+                          isBookmarked: false,
+                          progress: 0
+                        };
+                        
+                        // Check if this is the current episode
+                        if (currentEpisode && currentEpisode.id === episode.id) {
+                          togglePlayPause();
+                        } else {
+                          playEpisode(playerEpisode);
+                        }
+                        console.log(`Now playing ${episode.title}`);
                       }}
                     >
-                      <Play className="h-4 w-4" />
+                      {currentEpisode && currentEpisode.id === episode.id && isPlaying ? (
+                        <Pause className="h-4 w-4" />
+                      ) : (
+                        <Play className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                   <CardContent className="p-4">

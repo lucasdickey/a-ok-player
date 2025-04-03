@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './auth/auth-provider'
 import { validateFeed, addFeed } from '@/lib/feed-processor'
@@ -12,48 +11,29 @@ import { validateFeed, addFeed } from '@/lib/feed-processor'
 export default function AddFeedForm({ onSuccess }: { onSuccess?: () => void }) {
   const [feedUrl, setFeedUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
   const { user } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to add a podcast feed.",
-        variant: "destructive"
-      })
+      console.log("Authentication required")
       return
     }
     
     if (!feedUrl.trim()) {
-      toast({
-        title: "Empty URL",
-        description: "Please enter a podcast feed URL.",
-        variant: "destructive"
-      })
+      console.log("Empty URL")
       return
     }
     
     setIsLoading(true)
-    
-    // Show a loading toast
-    toast({
-      title: "Processing",
-      description: "Validating and adding podcast feed...",
-    })
 
     try {
       // Validate the feed first
       const validationResult = await validateFeed(feedUrl)
       
       if (!validationResult.isValid) {
-        toast({
-          title: "Invalid feed",
-          description: validationResult.message || "Please check the URL and try again.",
-          variant: "destructive"
-        })
+        console.log("Invalid feed:", validationResult.message || "Please check the URL and try again.")
         setIsLoading(false)
         return
       }
@@ -65,21 +45,14 @@ export default function AddFeedForm({ onSuccess }: { onSuccess?: () => void }) {
         throw new Error(result.message || "Failed to add podcast")
       }
       
-      toast({
-        title: "Podcast added!",
-        description: `Successfully added "${validationResult.metadata?.title}" to your library.`
-      })
+      console.log(`Successfully added "${validationResult.metadata?.title}" to your library.`)
       
       setFeedUrl('')
       if (onSuccess) onSuccess()
       
     } catch (error) {
       console.error('Error adding feed:', error)
-      toast({
-        title: "Failed to add podcast",
-        description: error instanceof Error ? error.message : "Please check the URL and try again.",
-        variant: "destructive"
-      })
+      console.error("Failed to add podcast:", error instanceof Error ? error.message : "Please check the URL and try again.")
     } finally {
       setIsLoading(false)
     }

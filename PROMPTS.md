@@ -374,4 +374,61 @@ Let's start by checking the database schema and making sure all the necessary ta
 4. Check for field name consistency across interfaces and database operations
 5. When using Supabase, ensure all required columns are present before attempting to insert data
 
+## 19. Remove Toast Notifications and Fix Playback
+
+```
+Please review this codebase and remove all references to toasts. I don't want any toast messages at all anymore.
+```
+
+### Implementation Details
+
+1. Removed all toast references from the codebase:
+   - Removed toast imports from components and hooks
+   - Removed the Toaster component from layouts
+   - Replaced all toast function calls with console.log/console.error
+   - Kept the toast component files in the UI directory for potential future use
+
+2. Updated the following files to remove toast functionality:
+   - `app/layout.tsx` and `app/new-layout.tsx` - Removed Toaster imports and components
+   - `components/add-feed-form.tsx` - Replaced toast calls with console.log
+   - `hooks/useFeeds.ts` - Replaced toast notifications with console output
+   - `components/auth/login-form.tsx` and `components/auth/signup-form.tsx` - Removed toast notifications
+   - `app/page.tsx` and `app/library/page.tsx` - Removed toast import and usage
+
+## 20. Fix Playback Functionality
+
+```
+Can we now work on hooking up the playback functionality? Right now hitting any play button does nothing.
+```
+
+### Implementation Details
+
+1. Connected player components with the PlayerProvider:
+   - Updated `components/podcast/episode-list.tsx` to use the PlayerProvider's playEpisode function
+   - Updated `app/page.tsx` to use proper playback functionality
+   - Updated `app/library/page.tsx` to support playback of episodes
+
+2. Added proper episode format conversion:
+   - Created mapper functions to convert PodcastEpisode objects to the Episode format expected by PlayerProvider
+   - Added fallback values for missing properties
+   - Added demo audio URLs for testing playback
+
+3. Updated the player UI to show current playback state:
+   - Added proper play/pause icons based on currently playing episode
+   - Updated the player tray to display current episode info
+
+4. Fixed and enhanced the player-tray.tsx component:
+   - Restored the expandable player functionality
+   - Fixed the progress slider for seeking within episodes
+   - Added visible playback rate controls in the expanded view
+   - Fixed the skip forward/backward button layout
+   - Improved the visual appearance of the player controls
+   - Fixed z-index to ensure the player stays above other content
+
+5. Enhanced player controls:
+   - Made the progress slider more visible and usable
+   - Added a border to slider handles for better visibility
+   - Added playback speed controls (0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x)
+   - Improved the expand/collapse functionality of the player tray
+
 *Note: This document will be updated throughout the development process to include all prompts used in creating the A-OK Player application.*
