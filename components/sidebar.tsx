@@ -1,11 +1,7 @@
 "use client"
 
-import type React from "react"
-
 import Link from "next/link"
 import Image from "next/image"
-import { Radio, Library, ListMusic } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { useMobile } from "@/hooks/use-mobile"
 
 export default function Sidebar() {
@@ -29,29 +25,8 @@ export default function Sidebar() {
           <span className="text-lg font-semibold text-foreground">A-OK Player</span>
         </Link>
         
-        <nav className="space-y-1">
-          <NavItem href="/" icon={<Radio className="h-4 w-4" />} label="Your Stream" />
-          <NavItem href="/library" icon={<Library className="h-4 w-4" />} label="Your Library" />
-          <NavItem href="/queue" icon={<ListMusic className="h-4 w-4" />} label="Queue" />
-        </nav>
+        {/* Sidebar content can be added here in the future */}
       </div>
     </div>
-  )
-}
-
-interface NavItemProps {
-  href: string
-  icon: React.ReactNode
-  label: string
-}
-
-function NavItem({ href, icon, label }: NavItemProps) {
-  return (
-    <Link href={href}>
-      <Button variant="ghost" className="w-full justify-start">
-        {icon}
-        {label}
-      </Button>
-    </Link>
   )
 }

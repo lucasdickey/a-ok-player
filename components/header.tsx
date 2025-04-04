@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Bell, User } from "lucide-react"
+import { Bell, User, Library, ListMusic } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -40,7 +40,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
-        {isMobile && (
+        <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center space-x-2">
             <Image 
               src="/images/a-ok-player-logo.png" 
@@ -51,9 +51,23 @@ export default function Header() {
             />
             <span className="font-bold">A-OK Player</span>
           </Link>
-        )}
-        
-        {!isMobile && <div className="w-6"></div>}
+          
+          {/* Navigation links */}
+          <div className="hidden md:flex items-center gap-2 ml-6">
+            <Link href="/library">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Library className="h-4 w-4" />
+                <span>Your Library</span>
+              </Button>
+            </Link>
+            <Link href="/queue">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <ListMusic className="h-4 w-4" />
+                <span>Queue</span>
+              </Button>
+            </Link>
+          </div>
+        </div>
 
         <div className="flex items-center">
           {user ? (

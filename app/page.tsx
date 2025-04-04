@@ -1,17 +1,39 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getUserFeeds, getRecentEpisodes, refreshAllFeeds } from "@/lib/feed-processor"
-import { PodcastFeed } from "@/lib/feed-processor"
-import { useAuth } from "@/components/auth/auth-provider"
-import { RecentlyPlayed } from "@/components/recently-played"
-import Link from "next/link"
-import { Calendar, Clock, Headphones, Play, Pause, PlusCircle, Radio, RefreshCw } from "lucide-react"
-import { usePlayer } from "@/components/player/player-provider"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  getUserFeeds,
+  getRecentEpisodes,
+  refreshAllFeeds,
+} from "@/lib/feed-processor";
+import { PodcastFeed } from "@/lib/feed-processor";
+import { useAuth } from "@/components/auth/auth-provider";
+import { RecentlyPlayed } from "@/components/recently-played";
+import Link from "next/link";
+import {
+  Calendar,
+  Clock,
+  Headphones,
+  Play,
+  Pause,
+  PlusCircle,
+  Radio,
+  RefreshCw,
+} from "lucide-react";
+import { usePlayer } from "@/components/player/player-provider";
+import { Progress } from "@/components/ui/progress";
+import { formatDuration } from "@/lib/utils";
 
 // Define types for episodes
 interface Episode {
@@ -35,68 +57,75 @@ interface Episode {
 }
 
 export default function StreamPage() {
-  const { user } = useAuth()
-  const router = useRouter()
-  const { playEpisode, currentEpisode, isPlaying, togglePlayPause } = usePlayer()
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [feeds, setFeeds] = useState<PodcastFeed[]>([])
-  const [recentEpisodes, setRecentEpisodes] = useState<Episode[]>([])
+  const { user } = useAuth();
+  const router = useRouter();
+  const {
+    playEpisode,
+    currentEpisode,
+    isPlaying,
+    togglePlayPause,
+    currentTime,
+    duration,
+  } = usePlayer();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [feeds, setFeeds] = useState<PodcastFeed[]>([]);
+  const [recentEpisodes, setRecentEpisodes] = useState<Episode[]>([]);
 
   // Load content when the component mounts or user changes
   useEffect(() => {
     if (!user) {
-      router.push('/auth')
-      return
+      router.push("/auth");
+      return;
     }
-    
+
     const loadContent = async () => {
-      setIsLoading(true)
-      
+      setIsLoading(true);
+
       try {
         // Get user's feeds
-        const userFeeds = await getUserFeeds(user.id)
-        setFeeds(userFeeds)
-        
+        const userFeeds = await getUserFeeds(user.id);
+        setFeeds(userFeeds);
+
         // Get recent episodes
-        const episodes = await getRecentEpisodes(user.id)
-        setRecentEpisodes(episodes)
+        const episodes = await getRecentEpisodes(user.id);
+        setRecentEpisodes(episodes);
       } catch (error) {
-        console.error('Error loading content:', error)
+        console.error("Error loading content:", error);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
-    
-    loadContent()
-  }, [user, router])
+    };
+
+    loadContent();
+  }, [user, router]);
 
   // Handle refresh
   const handleRefresh = async () => {
-    if (!user) return
-    
-    setIsRefreshing(true)
-    
+    if (!user) return;
+
+    setIsRefreshing(true);
+
     try {
-      await refreshAllFeeds(user.id)
-      
+      await refreshAllFeeds(user.id);
+
       // Reload content after refresh
-      const userFeeds = await getUserFeeds(user.id)
-      setFeeds(userFeeds)
-      
-      const episodes = await getRecentEpisodes(user.id)
-      setRecentEpisodes(episodes)
-      
-      console.log('Content refreshed successfully')
+      const userFeeds = await getUserFeeds(user.id);
+      setFeeds(userFeeds);
+
+      const episodes = await getRecentEpisodes(user.id);
+      setRecentEpisodes(episodes);
+
+      console.log("Content refreshed successfully");
     } catch (error) {
-      console.error('Error refreshing content:', error)
+      console.error("Error refreshing content:", error);
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
-  }
+  };
 
   if (!user) {
-    return null
+    return null;
   }
 
   if (isLoading) {
@@ -104,16 +133,16 @@ export default function StreamPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="container py-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Home</h1>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleRefresh}
           disabled={isRefreshing}
         >
@@ -143,35 +172,44 @@ export default function StreamPage() {
               recentEpisodes.slice(0, 6).map((episode) => (
                 <Card key={episode.id} className="overflow-hidden">
                   <div className="aspect-video relative">
-                    <img 
-                      src={episode.image_url || '/images/placeholder-podcast.png'} 
-                      alt={episode.title} 
+                    <img
+                      src={
+                        episode.image_url || "/images/placeholder-podcast.png"
+                      }
+                      alt={episode.title}
                       className="object-cover w-full h-full"
                     />
-                    <Button 
-                      variant="default" 
-                      size="icon" 
+                    <Button
+                      variant="default"
+                      size="icon"
                       className="absolute bottom-2 right-2 rounded-full"
                       onClick={() => {
                         // Create a player episode from the episode object
                         const playerEpisode = {
                           id: episode.id,
                           title: episode.title,
-                          description: episode.description || '',
-                          publishDate: episode.published_date || '',
-                          duration: episode.duration_formatted || '0:00',
+                          description: episode.description || "",
+                          publishDate: episode.published_date || "",
+                          duration: episode.duration_formatted || "0:00",
                           durationSeconds: episode.duration || 0,
-                          podcastTitle: episode.podcast_subscriptions?.title || 'Unknown Podcast',
+                          podcastTitle:
+                            episode.podcast_subscriptions?.title ||
+                            "Unknown Podcast",
                           podcastId: episode.feed_id,
-                          artwork: episode.image_url || '',
-                          audioUrl: episode.audio_url || 'https://example-samples.netlify.app/audio/podcast-sample.mp3',
+                          artwork: episode.image_url || "",
+                          audioUrl:
+                            episode.audio_url ||
+                            "https://example-samples.netlify.app/audio/podcast-sample.mp3",
                           isNew: false,
                           isBookmarked: false,
-                          progress: 0
+                          progress: 0,
                         };
-                        
+
                         // Check if this is the current episode
-                        if (currentEpisode && currentEpisode.id === episode.id) {
+                        if (
+                          currentEpisode &&
+                          currentEpisode.id === episode.id
+                        ) {
                           togglePlayPause();
                         } else {
                           playEpisode(playerEpisode);
@@ -179,7 +217,9 @@ export default function StreamPage() {
                         console.log(`Now playing ${episode.title}`);
                       }}
                     >
-                      {currentEpisode && currentEpisode.id === episode.id && isPlaying ? (
+                      {currentEpisode &&
+                      currentEpisode.id === episode.id &&
+                      isPlaying ? (
                         <Pause className="h-4 w-4" />
                       ) : (
                         <Play className="h-4 w-4" />
@@ -187,18 +227,43 @@ export default function StreamPage() {
                     </Button>
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-semibold truncate">{episode.title}</h3>
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[#f9f0dc] font-medium truncate">
+                          {episode.title}
+                        </h3>
+                        <p className="text-[#f9f0dc]/70 text-sm mt-1 line-clamp-2">
+                          {episode.description}
+                        </p>
+
+                        {currentEpisode && currentEpisode.id === episode.id && (
+                          <div className="mt-2 space-y-1">
+                            <Progress
+                              value={(currentTime / duration) * 100}
+                              className="h-1 bg-[#f9f0dc]/20"
+                            />
+                            <div className="flex justify-between text-xs text-[#f9f0dc]/70">
+                              <span>{formatDuration(currentTime)}</span>
+                              <span>{formatDuration(duration)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <p className="text-sm text-muted-foreground truncate">
-                      {episode.podcast_subscriptions?.title || 'Unknown Podcast'}
+                      {episode.podcast_subscriptions?.title ||
+                        "Unknown Podcast"}
                     </p>
                     <div className="flex items-center mt-2 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3 mr-1" />
-                      <span>{episode.duration_formatted || '0:00'}</span>
+                      <span>{episode.duration_formatted || "0:00"}</span>
                       <Calendar className="h-3 w-3 ml-3 mr-1" />
                       <span>
-                        {episode.published_date 
-                          ? new Date(episode.published_date).toLocaleDateString() 
-                          : 'Unknown date'}
+                        {episode.published_date
+                          ? new Date(
+                              episode.published_date
+                            ).toLocaleDateString()
+                          : "Unknown date"}
                       </span>
                     </div>
                   </CardContent>
@@ -220,7 +285,7 @@ export default function StreamPage() {
               </div>
             )}
           </div>
-          
+
           {recentEpisodes.length > 0 && (
             <div className="flex justify-center">
               <Button variant="outline" asChild>
@@ -239,27 +304,21 @@ export default function StreamPage() {
               feeds.map((feed) => (
                 <Card key={feed.id} className="overflow-hidden">
                   <div className="aspect-square relative">
-                    <img 
-                      src={feed.image_url || '/images/placeholder-podcast.png'} 
-                      alt={feed.title || 'Podcast'} 
+                    <img
+                      src={feed.image_url || "/images/placeholder-podcast.png"}
+                      alt={feed.title || "Podcast"}
                       className="object-cover w-full h-full"
                     />
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-semibold truncate">{feed.title}</h3>
                     <p className="text-sm text-muted-foreground truncate">
-                      {feed.author || 'Unknown Author'}
+                      {feed.author || "Unknown Author"}
                     </p>
                   </CardContent>
                   <CardFooter className="p-4 pt-0 flex justify-between">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      asChild
-                    >
-                      <Link href={`/feeds/${feed.id}`}>
-                        View Episodes
-                      </Link>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/feeds/${feed.id}`}>View Episodes</Link>
                     </Button>
                   </CardFooter>
                 </Card>
@@ -280,7 +339,7 @@ export default function StreamPage() {
               </div>
             )}
           </div>
-          
+
           {feeds.length > 0 && (
             <div className="flex justify-center">
               <Button variant="outline" asChild>
@@ -294,5 +353,5 @@ export default function StreamPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
