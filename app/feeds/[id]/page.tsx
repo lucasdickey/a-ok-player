@@ -10,8 +10,11 @@ import { getFeedDetails } from '@/lib/feed-processor';
 import { PodcastFeed, PodcastEpisode } from '@/lib/feed-processor';
 import { RefreshCw, ArrowLeft } from 'lucide-react';
 import EpisodeList from '../../../components/podcast/episode-list';
+import { use } from 'react';
 
 export default function FeedPage({ params }: { params: { id: string } }) {
+  // Use React.use() to properly unwrap the params object
+  const feedId = use(Promise.resolve(params.id));
   const [feed, setFeed] = useState<PodcastFeed | null>(null);
   const [episodes, setEpisodes] = useState<PodcastEpisode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +31,6 @@ export default function FeedPage({ params }: { params: { id: string } }) {
     const fetchFeedDetails = async () => {
       try {
         setLoading(true);
-        const feedId = typeof params.id === 'string' ? params.id : '';
         const result = await getFeedDetails(feedId);
         
         if (result.podcast) {
@@ -46,14 +48,13 @@ export default function FeedPage({ params }: { params: { id: string } }) {
     };
     
     fetchFeedDetails();
-  }, [params.id, user, router]);
+  }, [feedId, user, router]);
   
   const handleRefresh = async () => {
     if (!feed || refreshing) return;
     
     try {
       setRefreshing(true);
-      const feedId = typeof params.id === 'string' ? params.id : '';
       const result = await getFeedDetails(feedId);
       
       if (result.podcast) {

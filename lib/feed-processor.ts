@@ -137,6 +137,7 @@ export async function addFeed(
       .single();
 
     if (existingFeed) {
+      // Return without logging to console since this is an expected condition
       return {
         success: false,
         message: "You are already subscribed to this podcast",
@@ -154,7 +155,6 @@ export async function addFeed(
         return {
           success: false,
           message: validationResult.message,
-          error: new Error(validationResult.message),
         };
       }
     }
@@ -167,7 +167,7 @@ export async function addFeed(
         id: feedId,
         user_id: userId,
         feed_url: fixedUrl,
-        title: feedMetadata.title || "Unknown Podcast",
+        title: feedMetadata.title,
         description: feedMetadata.description || "",
         author: feedMetadata.author || "",
         image_url: feedMetadata.imageUrl || "",
@@ -202,7 +202,10 @@ export async function addFeed(
       newEpisodeCount: processingResult.newEpisodeCount,
     };
   } catch (error) {
-    console.error("Error in addFeed:", error);
+    // Only log errors that are not related to "already subscribed"
+    if (error instanceof Error && !error.message?.includes('already subscribed')) {
+      console.error("Error in addFeed:", error);
+    }
     return {
       success: false,
       message: "An unexpected error occurred while adding the feed",

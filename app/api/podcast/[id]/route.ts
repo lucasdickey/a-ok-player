@@ -7,6 +7,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Extract the ID from params
+    const id = params?.id
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing podcast ID' }, { status: 400 })
+    }
+
     // Get user session from cookie
     const { data: { session } } = await supabase.auth.getSession()
     
@@ -18,7 +25,7 @@ export async function GET(
     const { data: feed, error: feedError } = await supabase
       .from('podcast_subscriptions')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', session.user.id)
       .single()
     
@@ -82,6 +89,13 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Extract the ID from params
+    const id = params?.id
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing podcast ID' }, { status: 400 })
+    }
+    
     // Get user session from cookie
     const { data: { session } } = await supabase.auth.getSession()
     
@@ -90,14 +104,14 @@ export async function PUT(
     }
     
     // Refresh the feed
-    const result = await refreshFeed(session.user.id, params.id)
+    const result = await refreshFeed(session.user.id, id)
     
     if (!result.success) {
       return NextResponse.json({ error: result.message }, { status: 400 })
     }
     
     // Get the updated feed details
-    const { podcast, episodes } = await getFeedDetails(params.id)
+    const { podcast, episodes } = await getFeedDetails(id)
     
     return NextResponse.json({ 
       success: true, 

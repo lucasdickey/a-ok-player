@@ -167,107 +167,74 @@ export default function StreamPage() {
         </TabsList>
 
         <TabsContent value="recent" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {recentEpisodes.length > 0 ? (
-              recentEpisodes.slice(0, 6).map((episode) => (
-                <Card key={episode.id} className="overflow-hidden">
-                  <div className="aspect-video relative">
-                    <img
-                      src={
-                        episode.image_url || "/images/placeholder-podcast.png"
-                      }
-                      alt={episode.title}
-                      className="object-cover w-full h-full"
-                    />
-                    <Button
-                      variant="default"
-                      size="icon"
-                      className="absolute bottom-2 right-2 rounded-full"
-                      onClick={() => {
-                        // Create a player episode from the episode object
-                        const playerEpisode = {
-                          id: episode.id,
-                          title: episode.title,
-                          description: episode.description || "",
-                          publishDate: episode.published_date || "",
-                          duration: episode.duration_formatted || "0:00",
-                          durationSeconds: episode.duration || 0,
-                          podcastTitle:
-                            episode.podcast_subscriptions?.title ||
-                            "Unknown Podcast",
-                          podcastId: episode.feed_id,
-                          artwork: episode.image_url || "",
-                          audioUrl:
-                            episode.audio_url ||
-                            "https://example-samples.netlify.app/audio/podcast-sample.mp3",
-                          isNew: false,
-                          isBookmarked: false,
-                          progress: 0,
-                        };
-
-                        // Check if this is the current episode
-                        if (
-                          currentEpisode &&
-                          currentEpisode.id === episode.id
-                        ) {
-                          togglePlayPause();
-                        } else {
-                          playEpisode(playerEpisode);
+              recentEpisodes.slice(0, 8).map((episode) => (
+                <Link key={episode.id} href={`/episode/${episode.id}`}>
+                  <Card className="overflow-hidden w-[150px] h-[150px]">
+                    <div className="relative h-[150px] w-[150px]">
+                      <img
+                        src={
+                          episode.image_url || "/images/placeholder-podcast.png"
                         }
-                        console.log(`Now playing ${episode.title}`);
-                      }}
-                    >
-                      {currentEpisode &&
-                      currentEpisode.id === episode.id &&
-                      isPlaying ? (
-                        <Pause className="h-4 w-4" />
-                      ) : (
-                        <Play className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-[#f9f0dc] font-medium truncate">
-                          {episode.title}
-                        </h3>
-                        <p className="text-[#f9f0dc]/70 text-sm mt-1 line-clamp-2">
-                          {episode.description}
-                        </p>
-
-                        {currentEpisode && currentEpisode.id === episode.id && (
-                          <div className="mt-2 space-y-1">
-                            <Progress
-                              value={(currentTime / duration) * 100}
-                              className="h-1 bg-[#f9f0dc]/20"
-                            />
-                            <div className="flex justify-between text-xs text-[#f9f0dc]/70">
-                              <span>{formatDuration(currentTime)}</span>
-                              <span>{formatDuration(duration)}</span>
-                            </div>
-                          </div>
-                        )}
+                        alt={episode.title}
+                        className="object-cover w-full h-full"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-1">
+                        <h3 className="text-xs font-semibold text-white truncate">{episode.title}</h3>
                       </div>
+                      <Button
+                        variant="default"
+                        size="icon"
+                        className="absolute bottom-2 right-2 rounded-full h-8 w-8"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+
+                          // Create a player episode from the episode object
+                          const playerEpisode = {
+                            id: episode.id,
+                            title: episode.title,
+                            description: episode.description || "",
+                            publishDate: episode.published_date || "",
+                            duration: episode.duration_formatted || "0:00",
+                            durationSeconds: episode.duration || 0,
+                            podcastTitle:
+                              episode.podcast_subscriptions?.title ||
+                              "Unknown Podcast",
+                            podcastId: episode.feed_id,
+                            artwork: episode.image_url || "",
+                            audioUrl:
+                              episode.audio_url ||
+                              "https://example-samples.netlify.app/audio/podcast-sample.mp3",
+                            isNew: false,
+                            isBookmarked: false,
+                            progress: 0,
+                          };
+
+                          // Check if this is the current episode
+                          if (
+                            currentEpisode &&
+                            currentEpisode.id === episode.id
+                          ) {
+                            togglePlayPause();
+                          } else {
+                            playEpisode(playerEpisode);
+                          }
+                          console.log(`Now playing ${episode.title}`);
+                        }}
+                      >
+                        {currentEpisode &&
+                          currentEpisode.id === episode.id &&
+                          isPlaying ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {episode.podcast_subscriptions?.title ||
-                        "Unknown Podcast"}
-                    </p>
-                    <div className="flex items-center mt-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3 mr-1" />
-                      <span>{episode.duration_formatted || "0:00"}</span>
-                      <Calendar className="h-3 w-3 ml-3 mr-1" />
-                      <span>
-                        {episode.published_date
-                          ? new Date(
-                              episode.published_date
-                            ).toLocaleDateString()
-                          : "Unknown date"}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </Card>
+                </Link>
               ))
             ) : (
               <div className="col-span-full text-center py-12">
@@ -299,28 +266,22 @@ export default function StreamPage() {
         </TabsContent>
 
         <TabsContent value="subscriptions" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {feeds.length > 0 ? (
               feeds.map((feed) => (
-                <Card key={feed.id} className="overflow-hidden">
-                  <div className="aspect-square relative">
-                    <img
-                      src={feed.image_url || "/images/placeholder-podcast.png"}
-                      alt={feed.title || "Podcast"}
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold truncate">{feed.title}</h3>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {feed.author || "Unknown Author"}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0 flex justify-between">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/feeds/${feed.id}`}>View Episodes</Link>
-                    </Button>
-                  </CardFooter>
+                <Card key={feed.id} className="overflow-hidden w-[150px] h-[150px]">
+                  <Link href={`/feeds/${feed.id}`}>
+                    <div className="relative h-[150px] w-[150px]">
+                      <img
+                        src={feed.image_url || "/images/placeholder-podcast.png"}
+                        alt={feed.title || "Podcast"}
+                        className="object-cover w-full h-full"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 p-1">
+                        <h3 className="text-xs font-semibold text-white truncate">{feed.title}</h3>
+                      </div>
+                    </div>
+                  </Link>
                 </Card>
               ))
             ) : (

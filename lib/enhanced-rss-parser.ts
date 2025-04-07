@@ -62,7 +62,7 @@ export interface Episode {
 }
 
 // Extended types for RSS parser
-interface ExtendedItem extends Parser.Item {
+interface ExtendedItem extends Omit<Parser.Item, 'enclosure'> {
   itunes?: {
     duration?: string;
     image?: string | { href?: string; url?: string };
@@ -74,8 +74,17 @@ interface ExtendedItem extends Parser.Item {
     episode?: string;
     episodeType?: string;
   };
+  duration?: string;
+  image?: string | { href?: string; url?: string };
+  summary?: string;
+  explicit?: string;
+  author?: string;
+  categories?: string[];
+  season?: string;
+  episode?: string;
+  episodeType?: string;
   enclosure?: {
-    url?: string;
+    url: string;
     length?: string;
     type?: string;
   };
@@ -91,7 +100,7 @@ interface ExtendedItem extends Parser.Item {
   }[];
 }
 
-interface ExtendedOutput extends Parser.Output<ExtendedItem> {
+interface ExtendedOutput extends Omit<Parser.Output<ExtendedItem>, 'image'> {
   itunes?: {
     image?: string | { href?: string; url?: string };
     author?: string;
@@ -104,14 +113,20 @@ interface ExtendedOutput extends Parser.Output<ExtendedItem> {
     type?: string;
   };
   image?: {
-    url?: string;
+    url: string;
     link?: string;
+    title?: string;
   };
   'podcast:locked'?: boolean;
   'podcast:funding'?: {
     url?: string;
     value?: string;
   }[];
+  creator?: string;
+  author?: string;
+  language?: string;
+  lastBuildDate?: string;
+  summary?: string;
 }
 
 // Create a new parser instance with extended custom fields
@@ -344,8 +359,21 @@ function extractAudioUrl(item: ExtendedItem): string {
  */
 export async function parseFeed(feedUrl: string): Promise<{ podcast: Podcast, episodes: Episode[] }> {
   try {
-    // Fetch and parse the feed
-    const feed = await parser.parseURL(feedUrl) as ExtendedOutput;
+    // First fix the URL if needed
+    const fixedUrl = fixFeedUrl(feedUrl);
+    
+    // Use our proxy API to fetch the feed content
+    const proxyUrl = `/api/proxy?url=${encodeURIComponent(fixedUrl)}`;
+    const response = await fetch(proxyUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
+    }
+    
+    const feedContent = await response.text();
+    
+    // Parse the feed content as a string
+    const feed = await parser.parseString(feedContent) as ExtendedOutput;
     
     // Generate a unique ID for the podcast
     const podcastId = uuidv4();
@@ -455,7 +483,21 @@ export async function parseFeed(feedUrl: string): Promise<{ podcast: Podcast, ep
  */
 export async function isValidPodcastFeed(url: string): Promise<boolean> {
   try {
-    const feed = await parser.parseURL(url) as ExtendedOutput;
+    // First fix the URL if needed
+    const fixedUrl = fixFeedUrl(url);
+    
+    // Use our proxy API to fetch the feed content
+    const proxyUrl = `/api/proxy?url=${encodeURIComponent(fixedUrl)}`;
+    const response = await fetch(proxyUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
+    }
+    
+    const feedContent = await response.text();
+    
+    // Parse the feed content as a string
+    const feed = await parser.parseString(feedContent) as ExtendedOutput;
     
     // Check if it has basic podcast elements
     const hasItems = feed.items && feed.items.length > 0;

@@ -46,7 +46,7 @@ export function useFeeds() {
   const addNewFeed = async (feedUrl: string) => {
     if (!user) {
       console.error('Error: You must be logged in to add feeds')
-      return { success: false }
+      return { success: false, message: 'You must be logged in to add feeds' }
     }
 
     try {
@@ -55,15 +55,18 @@ export function useFeeds() {
       if (result.success) {
         console.log(`Success: Added "${result.message}"`)
         fetchFeeds() // Refresh the feeds list
-        return { success: true, feedId: result.feedId }
+        return { success: true, feedId: result.feedId, message: result.message }
       } else {
-        console.error('Error:', result.message)
-        return { success: false }
+        // Only log errors to console if it's not an "already subscribed" message
+        if (!result.message?.includes('already subscribed')) {
+          console.error('Error:', result.message)
+        }
+        return { success: false, message: result.message, feedId: result.feedId }
       }
     } catch (error) {
       console.error('Error adding feed:', error)
       console.error('Error: Failed to add podcast feed')
-      return { success: false }
+      return { success: false, message: 'Failed to add podcast feed' }
     }
   }
 
